@@ -1,5 +1,5 @@
-from .GFpn_el import GfpnEl
+from .GFpnElement import GFpnElement
 
 __all__ = (
-    "GfpnEl"
+    "GFpnElement"
 )

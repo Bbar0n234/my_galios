@@ -1,4 +1,4 @@
-from .GFpn_field import GFpn
+from .GFpn_field import GaloisField
 
 import sys
 import os
