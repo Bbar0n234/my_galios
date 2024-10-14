@@ -54,7 +54,7 @@ coeffs_input = st.text_input(
 
 # Парсинг коэффициентов
 try:
-    modulus_coeffs = [int(c.strip()) for c in coeffs_input.split(',')]
+    modulus_coeffs = [int(c.strip()) for c in coeffs_input.split(',')] # % p 
 except ValueError:
     modulus_coeffs = None
 
@@ -86,12 +86,17 @@ if st.session_state['field_p'] != p or st.session_state['field_modulus_coeffs'] 
 # Проверка простоты p и корректности многочлена
 field = None
 if modulus_coeffs is not None:
-    if not isprime(p):
+    if len(modulus_coeffs) < 2:
+        st.error("Многочлен должен иметь степень как минимум 1 (введите как минимум два коэффициента).")
+    elif not isprime(p):
         st.error(f"{p} не является простым числом! Пожалуйста, введите простое число.")
     else:
         try:
             field = GaloisField(p, modulus_coeffs)
             st.success(f"Поле {field} успешно создано.")
+
+            st.write("**Многочлен, задающий поле:**")
+            st.write(format_polynomial(field.modulus_polynomial))
         except ValueError as e:
             st.error(str(e))
         except Exception as e:
@@ -109,7 +114,9 @@ if field:
     )
     if st.button("Добавить элемент"):
         try:
-            new_coeffs = [int(c.strip()) for c in new_poly_input.split(',')]
+            new_coeffs = [int(c.strip()) % p for c in new_poly_input.split(',')]
+            if len(new_coeffs) > len(field.modulus_polynomial.coeffs) - 1:
+                st.warning(f"Максимальная степень элемента поля: {len(field.modulus_polynomial.coeffs) - 2}. Привожу многочлен по модулю.")
             element = field.create_element(new_coeffs)
             # Назначение уникального имени элементу
             element_id = len(st.session_state['polynomials']) + 1
@@ -217,23 +224,15 @@ if field:
         )
         if st.button("Вычислить значение"):
             try:
-                x_coeffs = [int(c.strip()) for c in x_value_input.split(',')]
+                # При вычислении значения многочлена
+                x_coeffs = [int(c.strip()) % p for c in x_value_input.split(',')]
+                if len(x_coeffs) > len(field.modulus_polynomial.coeffs) - 1:
+                    st.warning(f"Максимальная степень элемента поля: {len(field.modulus_polynomial.coeffs) - 2}. Привожу многочлен по модулю.")
                 x_element = field.create_element(x_coeffs)
                 result = el_eval.evaluate_at(x_element)
                 st.session_state['last_evaluation_result'] = result
                 st.write(f"Значение {format_polynomial(el_eval.poly)} при {format_polynomial(x_element.poly)}: {format_polynomial(result.poly)}")
             except Exception as e:
                 st.error("Некорректный ввод значения для вычисления.")
-
-        # # Кнопка для сохранения результата вычисления
-        # if st.session_state.get('last_evaluation_result') is not None:
-        #     if st.button("Сохранить результат как новый элемент", key="save_eval_result"):
-        #         result = st.session_state['last_evaluation_result']
-        #         element_id = len(st.session_state['polynomials']) + 1
-        #         element_name = f"Элемент {element_id}"
-        #         st.session_state['polynomials'][element_name] = result
-        #         st.success(f"Результат сохранен как {element_name}: {format_polynomial(result.poly)}")
-        #         st.session_state['last_evaluation_result'] = None  # Очистка после сохранения
-        #         st.rerun()
     else:
         st.info("Пока нет добавленных элементов поля.")
