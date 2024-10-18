@@ -1,8 +1,38 @@
-from __future__ import annotations
-
 import numpy as np
 
-from typing import List
+def format_polynomial(poly: np.poly1d) -> str:
+    """
+    Преобразует многочлен из numpy.poly1d в читаемую строку.
+
+    :param poly: Многочлен в формате numpy.poly1d.
+    :return: Строка, представляющая многочлен.
+    """
+    coeffs = poly.coeffs
+    degree = len(coeffs) - 1
+    terms = []
+    for i, coef in enumerate(coeffs):
+        current_degree = degree - i
+        coef = int(coef)
+        if coef == 0:
+            continue
+        # Обработка коэффициента
+        if abs(coef) == 1 and current_degree != 0:
+            coef_str = "-" if coef == -1 else ""
+        else:
+            coef_str = str(coef)
+        # Обработка степени
+        if current_degree > 1:
+            term = f"{coef_str}x^{current_degree}"
+        elif current_degree == 1:
+            term = f"{coef_str}x"
+        else:
+            term = f"{coef_str}"
+        terms.append(term)
+    if not terms:
+        return "0"
+    polynomial = " + ".join(terms)
+    polynomial = polynomial.replace("+ -", "- ")
+    return polynomial
 
 
 def mod_coeffs(coeffs: np.ndarray, p: int) -> np.ndarray:
@@ -83,70 +113,3 @@ def inverse_polynomial(poly: np.poly1d, p: int, modulus_poly: np.poly1d) -> np.p
 
     return mod_pow_polynomial(poly, p ** (len(modulus_poly.coeffs) - 1) - 2, p, modulus_poly)
 
-
-class GFpnElement:
-    """
-    Класс, представляющий элемент в поле GF(p^n).
-    """
-    def __init__(self, p: int, coeffs: List[int], modulus_poly: np.poly1d):
-        """
-        Инициализация элемента поля GF(p^n).
-
-        :param p: Характеристика поля.
-        :param coeffs: Коэффициенты многочлена элемента.
-        :param modulus_poly: Модульный многочлен поля.
-        """
-        self.p = p
-        self.modulus_poly = modulus_poly
-
-        _, remainder = np.polydiv(np.poly1d(coeffs), modulus_poly)
-        self.poly = np.poly1d([coef % p for coef in remainder.coeffs])
-
-
-    def evaluate_at(self, x_element: GFpnElement) -> GFpnElement:
-        """
-        Вычисляет значение многочлена в заданном элементе поля.
-
-        :param x_element: Значение, в котором вычисляется многочлен.
-        :return: Результат вычисления как элемент поля.
-        """
-        result = np.poly1d([0])
-        x_power = np.poly1d([1])
-
-        for coef in self.poly.coeffs[::-1]:
-            term = np.poly1d([coef]) * x_power
-            result = mod_polynomial(result + term, self.modulus_poly, self.p)
-            x_power = mod_polynomial(x_power * x_element.poly, self.modulus_poly, self.p)
-
-        return GFpnElement(self.p, result.coeffs, self.modulus_poly)
-
-
-    def inverse(self) -> GFpnElement:
-        """
-        Вычисляет мультипликативный обратный элемент в поле GF(p^n).
-
-        :return: Обратный элемент поля.
-        """
-        inv_poly = inverse_polynomial(self.poly, self.p, self.modulus_poly)
-        return GFpnElement(self.p, inv_poly.coeffs, self.modulus_poly)
-
-    def __add__(self, other: GFpnElement) -> GFpnElement:
-        result_poly = self.poly + other.poly
-        return GFpnElement(self.p, result_poly.coeffs, self.modulus_poly)
-
-    def __sub__(self, other: GFpnElement) -> GFpnElement:
-        result_poly = self.poly - other.poly
-        return GFpnElement(self.p, result_poly.coeffs, self.modulus_poly)
-
-    def __mul__(self, other: GFpnElement) -> GFpnElement:
-        result_poly = self.poly * other.poly
-        return GFpnElement(self.p, result_poly.coeffs, self.modulus_poly)
-
-    def __truediv__(self, other: GFpnElement) -> GFpnElement:
-        inverse_poly = inverse_polynomial(other.poly, self.p, self.modulus_poly)
-        result_poly = self.poly * inverse_poly
-        return GFpnElement(self.p, result_poly.coeffs, self.modulus_poly)
-
-    def __repr__(self) -> str:
-        coeffs = [int(c) for c in self.poly.coeffs]
-        return f"GFpnElement({coeffs})"

@@ -7,7 +7,7 @@ import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
 
-from funcs import GFpnElement
+from elements import GaloisFieldExtensionElement
 
 from sympy import isprime, Poly
 from sympy.abc import x
@@ -15,7 +15,7 @@ from sympy.abc import x
 from typing import List
 
 
-class GaloisField:
+class GaloisFieldExtension:
     """
     Класс, представляющий поле Галуа GF(p^n).
     """
@@ -48,14 +48,14 @@ class GaloisField:
         poly = Poly(coeffs[::-1], x, modulus=p)
         return poly.is_irreducible
 
-    def create_element(self, coeffs: List[int]) -> GFpnElement:
+    def create_element(self, coeffs: List[int]) -> GaloisFieldExtensionElement:
         """
         Создает элемент поля GF(p^n).
 
         :param coeffs: Коэффициенты многочлена элемента.
         :return: Экземпляр GFpnElement.
         """
-        return GFpnElement(self.p, coeffs, self.modulus_polynomial)
+        return GaloisFieldExtensionElement(self.p, coeffs, self.modulus_polynomial)
 
     def __str__(self) -> str:
         return f"GF({self.p}^{len(self.modulus_polynomial.coeffs) - 1})"
