@@ -2,6 +2,9 @@
 from elements import GaloisFieldSimpleElement, GaloisFieldSimplePolynom
 
 class GaloisFieldSimple:
+    """
+    Класс, представляющий собой базовое поле GF(p).
+    """
     def __init__(self, p):
         self.p = p
 

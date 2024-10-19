@@ -1,8 +1,9 @@
 import numpy as np
 
+
 def format_polynomial(poly: np.poly1d) -> str:
     """
-    Преобразует многочлен из numpy.poly1d в читаемую строку.
+    Преобразует многочлен в читаемую строку.
 
     :param poly: Многочлен в формате numpy.poly1d.
     :return: Строка, представляющая многочлен.
@@ -15,12 +16,12 @@ def format_polynomial(poly: np.poly1d) -> str:
         coef = int(coef)
         if coef == 0:
             continue
-        # Обработка коэффициента
+
         if abs(coef) == 1 and current_degree != 0:
             coef_str = "-" if coef == -1 else ""
         else:
             coef_str = str(coef)
-        # Обработка степени
+
         if current_degree > 1:
             term = f"{coef_str}x^{current_degree}"
         elif current_degree == 1:
@@ -28,16 +29,19 @@ def format_polynomial(poly: np.poly1d) -> str:
         else:
             term = f"{coef_str}"
         terms.append(term)
+
     if not terms:
         return "0"
+    
     polynomial = " + ".join(terms)
     polynomial = polynomial.replace("+ -", "- ")
+
     return polynomial
 
 
 def mod_coeffs(coeffs: np.ndarray, p: int) -> np.ndarray:
     """
-    Применяет модуль p к каждому коэффициенту.
+    Берёт каждый коэффициент многочлена по модулю p
 
     :param coeffs: Массив коэффициентов многочлена.
     :param p: Характеристика поля.
@@ -48,9 +52,9 @@ def mod_coeffs(coeffs: np.ndarray, p: int) -> np.ndarray:
 
 def mod_polynomial(poly1: np.poly1d, poly2: np.poly1d, p: int) -> np.poly1d:
     """
-    Вычисляет poly1 mod poly2 над GF(p).
+    Делит два многочлена в поле GF(p) (без приведения по модулю многочлена).
 
-    :param poly1: Делимое многочлен.
+    :param poly1: Делимый многочлен.
     :param poly2: Делитель многочлен.
     :param p: Характеристика поля.
     :return: Остаток от деления poly1 на poly2 по модулю p.
@@ -62,13 +66,13 @@ def mod_polynomial(poly1: np.poly1d, poly2: np.poly1d, p: int) -> np.poly1d:
 
 def mod_pow_polynomial(poly: np.poly1d, exponent: int, p: int, modulus_poly: np.poly1d) -> np.poly1d:
     """
-    Эффективно вычисляет (poly ** exponent) mod modulus_poly над GF(p).
+    Возводит многочлен в степень с помощью алгоритмы двоичного возведения.
 
     :param poly: Базовый многочлен.
     :param exponent: Показатель степени.
     :param p: Характеристика поля.
     :param modulus_poly: Модульный многочлен.
-    :return: Результат возведения в степень по модулю modulus_poly.
+    :return: Результат возведения многочлена в степень по модулю другого многочлена.
     """
     result = np.poly1d([1])
     base = np.poly1d(poly.coeffs)

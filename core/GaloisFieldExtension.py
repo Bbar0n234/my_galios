@@ -19,7 +19,6 @@ class GaloisFieldExtension:
     """
     Класс, представляющий поле Галуа GF(p^n).
     """
-
     def __init__(self, p: int, modulus_coeffs: List[int]) -> None:
         """
         Инициализация поля Галуа GF(p^n).
@@ -43,17 +42,18 @@ class GaloisFieldExtension:
 
         :param coeffs: Коэффициенты многочлена.
         :param p: Характеристика поля.
-        :return: True если многочлен неприводим, иначе False.
+        :return: True - если многочлен неприводим, иначе False.
         """
         poly = Poly(coeffs[::-1], x, modulus=p)
+
         return poly.is_irreducible
 
     def create_element(self, coeffs: List[int]) -> GaloisFieldExtensionElement:
         """
         Создает элемент поля GF(p^n).
 
-        :param coeffs: Коэффициенты многочлена элемента.
-        :return: Экземпляр GFpnElement.
+        :param coeffs: Коэффициенты многочлена.
+        :return: новый элемент (многочлен).
         """
         return GaloisFieldExtensionElement(self.p, coeffs, self.modulus_polynomial)
 
