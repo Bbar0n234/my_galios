@@ -41,79 +41,109 @@ def format_polynomial(poly: np.poly1d) -> str:
 
 def mod_coeffs(coeffs: np.ndarray, p: int) -> np.ndarray:
     """
-    Берёт каждый коэффициент многочлена по модулю p
+    Приводит коэффициенты многочлена по модулю p.
 
     :param coeffs: Массив коэффициентов многочлена.
-    :param p: Характеристика поля.
-    :return: Массив коэффициентов по модулю p.
+    :param p: Характеристика конечного поля (модуль).
+    :return: Массив коэффициентов, приведённых по модулю p.
     """
     return np.array([el % p for el in coeffs], dtype=int)
 
 
-def mod_polynomial(poly1: np.poly1d, poly2: np.poly1d, p: int) -> np.poly1d:
-    """
-    Делит два многочлена в поле GF(p) (без приведения по модулю многочлена).
-
-    :param poly1: Делимый многочлен.
-    :param poly2: Делитель многочлен.
-    :param p: Характеристика поля.
-    :return: Остаток от деления poly1 на poly2 по модулю p.
-    """
-    _, remainder = np.polydiv(poly1, poly2)
-    coeffs = mod_coeffs(remainder.coeffs, p)
-    return np.poly1d(coeffs)
-
-
-def mod_pow_polynomial(poly: np.poly1d, exponent: int, p: int, modulus_poly: np.poly1d) -> np.poly1d:
-    """
-    Возводит многочлен в степень с помощью алгоритмы двоичного возведения.
-
-    :param poly: Базовый многочлен.
-    :param exponent: Показатель степени.
-    :param p: Характеристика поля.
-    :param modulus_poly: Модульный многочлен.
-    :return: Результат возведения многочлена в степень по модулю другого многочлена.
-    """
-    result = np.poly1d([1])
-    base = np.poly1d(poly.coeffs)
-
-    exponent_mod = p ** (len(modulus_poly.coeffs) - 1) - 1
-    exponent = exponent % exponent_mod
-    if exponent == 0:
-        return result
-
-    while exponent > 0:
-        if exponent % 2 == 1:
-            result = mod_polynomial(result * base, modulus_poly, p)
-        base = mod_polynomial(base * base, modulus_poly, p)
-        exponent = exponent // 2
-
-    return result
-
-
 def inverse_in_field(element: int, p: int) -> int:
     """
-    Вычисляет мультипликативный обратный элемента в GF(p).
+    Вычисляет мультипликативный обратный элемент в поле GF(p).
 
-    :param element: Элемент поля.
-    :param p: Характеристика поля.
-    :return: Обратный элемент.
+    :param element: Элемент конечного поля GF(p).
+    :param p: Характеристика конечного поля.
+    :return: Обратный элемент в поле GF(p).
     """
     return pow(element, p - 2, p)
 
 
+def poly_mul(poly1: np.poly1d, poly2: np.poly1d, p: int) -> np.poly1d:
+    """
+    Умножает два многочлена и приводит коэффициенты произведения по модулю p.
+
+    :param poly1: Первый многочлен.
+    :param poly2: Второй многочлен.
+    :param p: Характеристика конечного поля.
+    :return: Произведение двух многочленов по модулю p.
+    """
+    product_coeffs = np.convolve(poly1.coeffs, poly2.coeffs)
+    product_coeffs = mod_coeffs(product_coeffs, p)
+
+    return np.poly1d(product_coeffs)
+
+
+def mod_polynomial(poly1: np.poly1d, poly2: np.poly1d, p: int) -> np.poly1d:
+    """
+    Делит многочлен poly1 на poly2 и возвращает остаток от деления по модулю p.
+
+    :param poly1: Делимый многочлен.
+    :param poly2: Делитель многочлен.
+    :param p: Характеристика конечного поля.
+    :return: Остаток от деления poly1 на poly2 по модулю p.
+    """
+    poly1_coeffs = mod_coeffs(poly1.coeffs, p).tolist()
+    poly2_coeffs = mod_coeffs(poly2.coeffs, p).tolist()
+
+    remainder = poly1_coeffs[:]
+
+    while len(remainder) >= len(poly2_coeffs):
+        coeff = (remainder[0] * inverse_in_field(poly2_coeffs[0], p)) % p
+        for i in range(len(poly2_coeffs)):
+            remainder[i] = (remainder[i] - coeff * poly2_coeffs[i]) % p
+        remainder = remainder[1:] if remainder[0] == 0 else remainder
+
+    if not remainder:
+        remainder = [0]
+
+    return np.poly1d(remainder)
+
+
+def mod_pow_polynomial(poly: np.poly1d, e: int, p: int, mod_poly: np.poly1d) -> np.poly1d:
+    """
+    Возводит многочлен в степень e по модулю многочлена mod_poly в поле GF(p).
+
+    :param poly: Многочлен для возведения в степень.
+    :param e: Степень.
+    :param p: Характеристика конечного поля.
+    :param mod_poly: Модульный многочлен, по которому происходит деление.
+    :return: Многочлен, возведённый в степень e по модулю mod_poly.
+    """
+    result = np.poly1d([1])
+    base = poly
+
+    e %= p ** (len(mod_poly.coeffs) - 1) - 1
+    if e == 0:
+        return result
+
+    while e > 0:
+        if e % 2 == 1:
+            result = poly_mul(result, base, p)
+            result = mod_polynomial(result, mod_poly, p)
+        base = poly_mul(base, base, p)
+        base = mod_polynomial(base, mod_poly, p)
+        e //= 2
+
+    return result
+
+
 def inverse_polynomial(poly: np.poly1d, p: int, modulus_poly: np.poly1d) -> np.poly1d:
     """
-    Вычисляет мультипликативный обратный многочлена в GF(p^n).
+    Вычисляет обратный многочлен по модулю другого многочлена в поле GF(p^n).
 
-    :param poly: Многочлен для обращения.
-    :param p: Характеристика поля.
-    :param modulus_poly: Модульный многочлен.
-    :return: Обратный многочлен.
+    :param poly: Многочлен, для которого нужно найти обратный.
+    :param p: Характеристика конечного поля.
+    :param modulus_poly: Модульный многочлен, по которому выполняется операция.
+    :return: Обратный многочлен по модулю modulus_poly в поле GF(p^n).
     """
     if len(poly.coeffs) == 1:
         inverse_el = inverse_in_field(int(poly.coeffs[0]), p)
         return np.poly1d([inverse_el])
 
     return mod_pow_polynomial(poly, p ** (len(modulus_poly.coeffs) - 1) - 2, p, modulus_poly)
+
+
 
