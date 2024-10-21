@@ -3,10 +3,12 @@ from sympy import isprime
 from core import GaloisFieldExtension, GaloisFieldSimple
 from core import format_polynomial
 
+
 # Функция для добавления записи в лог
 def log_operation(operation_log, entry):
     operation_log.append(entry)
     st.session_state['operation_log'] = operation_log
+
 
 # Инициализация состояния сессии
 if 'field_type' not in st.session_state:
@@ -21,10 +23,14 @@ if 'polynomials_simple' not in st.session_state:
     st.session_state['polynomials_simple'] = {}
 if 'polynomials_poly_simple' not in st.session_state:
     st.session_state['polynomials_poly_simple'] = {}
-if 'last_operation_result' not in st.session_state:
-    st.session_state['last_operation_result'] = None
-if 'last_inverse_result' not in st.session_state:
-    st.session_state['last_inverse_result'] = None
+if 'last_operation_result_element' not in st.session_state:
+    st.session_state['last_operation_result_element'] = None
+if 'last_operation_result_polynomial' not in st.session_state:
+    st.session_state['last_operation_result_polynomial'] = None
+if 'last_inverse_result_element' not in st.session_state:
+    st.session_state['last_inverse_result_element'] = None
+if 'last_inverse_result_polynomial' not in st.session_state:
+    st.session_state['last_inverse_result_polynomial'] = None
 if 'last_evaluation_result' not in st.session_state:
     st.session_state['last_evaluation_result'] = None
 if 'operation_log' not in st.session_state:
@@ -66,7 +72,8 @@ if field_type == 'Расширение поля':
 
     # Проверка изменения поля
     field_changed = False
-    if (st.session_state['field_p'] != p or st.session_state['field_modulus_coeffs'] != modulus_coeffs or st.session_state['field_type'] != field_type):
+    if (st.session_state['field_p'] != p or st.session_state['field_modulus_coeffs'] != modulus_coeffs or
+            st.session_state['field_type'] != field_type):
         field_changed = True
         st.session_state['field_p'] = p
         st.session_state['field_modulus_coeffs'] = modulus_coeffs
@@ -74,8 +81,10 @@ if field_type == 'Расширение поля':
         st.session_state['field_elements_simple'] = {}
         st.session_state['polynomials_simple'] = {}
         st.session_state['polynomials_poly_simple'] = {}
-        st.session_state['last_operation_result'] = None
-        st.session_state['last_inverse_result'] = None
+        st.session_state['last_operation_result_element'] = None
+        st.session_state['last_operation_result_polynomial'] = None
+        st.session_state['last_inverse_result_element'] = None
+        st.session_state['last_inverse_result_polynomial'] = None
         st.session_state['last_evaluation_result'] = None
 
     if modulus_coeffs is not None and p:
@@ -101,16 +110,19 @@ if field_type == 'Расширение поля':
 elif field_type == 'Простое поле':
     modulus_coeffs = None
     field_changed = False
-    if (st.session_state['field_p'] != p or st.session_state['field_modulus_coeffs'] != modulus_coeffs or st.session_state['field_type'] != field_type):
+    if (st.session_state['field_p'] != p or st.session_state['field_modulus_coeffs'] != modulus_coeffs or
+            st.session_state['field_type'] != field_type):
         field_changed = True
         st.session_state['field_p'] = p
         st.session_state['field_modulus_coeffs'] = modulus_coeffs
         st.session_state['field_type'] = field_type
         st.session_state['field_elements_simple'] = {}
-        st.session_state['polynomials_simple'] = {}     
-        st.session_state['polynomials_poly_simple'] = {} 
-        st.session_state['last_operation_result'] = None
-        st.session_state['last_inverse_result'] = None
+        st.session_state['polynomials_simple'] = {}
+        st.session_state['polynomials_poly_simple'] = {}
+        st.session_state['last_operation_result_element'] = None
+        st.session_state['last_operation_result_polynomial'] = None
+        st.session_state['last_inverse_result_element'] = None
+        st.session_state['last_inverse_result_polynomial'] = None
         st.session_state['last_evaluation_result'] = None
 
     if p:
@@ -127,7 +139,8 @@ if field:
             "Введите коэффициенты нового элемента поля (от старшей степени к свободному члену), через запятую:",
             key="new_poly"
         )
-        new_poly_file = st.file_uploader("Или загрузите коэффициенты элемента из файла:", type=["txt"], key="new_poly_file")
+        new_poly_file = st.file_uploader("Или загрузите коэффициенты элемента из файла:", type=["txt"],
+                                         key="new_poly_file")
 
         if new_poly_file is not None:
             try:
@@ -139,7 +152,8 @@ if field:
             try:
                 new_coeffs = [int(c.strip()) % p for c in new_poly_input.split(',')]
                 if len(new_coeffs) > len(field.modulus_polynomial.coeffs) - 1:
-                    st.warning(f"Максимальная степень элемента поля: {len(field.modulus_polynomial.coeffs) - 2}. Привожу многочлен по модулю.")
+                    st.warning(
+                        f"Максимальная степень элемента поля: {len(field.modulus_polynomial.coeffs) - 2}. Привожу многочлен по модулю.")
                 element = field.create_element(new_coeffs)
 
                 element_id = len(st.session_state['field_elements_simple']) + 1
@@ -177,7 +191,7 @@ if field:
                 if st.button("Удалить", key=f"del_{name}"):
                     del st.session_state['field_elements_simple'][name]
                     st.success(f"{name} был удалён.")
-                    st.rerun() 
+                    st.rerun()
     elif field_type == 'Простое поле' and st.session_state['field_elements_simple']:
         st.subheader("Список элементов поля")
         for name, element in st.session_state['field_elements_simple'].items():
@@ -188,9 +202,9 @@ if field:
                 if st.button("Удалить", key=f"del_{name}"):
                     del st.session_state['field_elements_simple'][name]
                     st.success(f"{name} был удалён.")
-                    st.rerun() 
+                    st.rerun()
 
-    # Дополнительный раздел для работы с многочленами в простом поле
+                    # Дополнительный раздел для работы с многочленами в простом поле
     if field_type == 'Простое поле':
         st.header("Работа с многочленами над GF(p)")
 
@@ -209,7 +223,7 @@ if field:
 
         if st.button("Добавить многочлен"):
             try:
-                coeffs = [int(c.strip()) for c in poly_input.split(',')] #
+                coeffs = [int(c.strip()) for c in poly_input.split(',')]  #
                 poly = field.create_polynom(coeffs)
 
                 poly_id = len(st.session_state['polynomials_simple']) + 1
@@ -247,7 +261,8 @@ if field:
                 poly1 = st.session_state['polynomials_simple'][poly1_name]
                 poly2 = st.session_state['polynomials_simple'][poly2_name]
 
-                poly_operation = st.selectbox("Выберите операцию", ["Сложение", "Вычитание", "Умножение", "Деление"], key="poly_operation_select")
+                poly_operation = st.selectbox("Выберите операцию", ["Сложение", "Вычитание", "Умножение", "Деление"],
+                                              key="poly_operation_select")
 
                 if st.button("Выполнить операцию", key="compute_poly_operation"):
                     try:
@@ -273,13 +288,13 @@ if field:
                             entry = f"Операция: {operation_desc}\nМногочлен 1: {format_polynomial(poly1.poly)}\nМногочлен 2: {format_polynomial(poly2.poly)}\nРезультат: {format_polynomial(result_poly.poly)}\n"
                             log_operation(st.session_state['operation_log'], entry)
 
-                            st.session_state['last_operation_result'] = result_poly
+                            st.session_state['last_operation_result_polynomial'] = result_poly
                         else:
                             st.write(f"Частное: {format_polynomial(result_poly.poly)}")
                             st.write(f"Остаток: {format_polynomial(remainder_poly.poly)}")
 
                             entry = f"Операция: {operation_desc}\nМногочлен 1: {format_polynomial(poly1.poly)}\nМногочлен 2: {format_polynomial(poly2.poly)}\nЧастное: {format_polynomial(result_poly.poly)}\nОстаток: {format_polynomial(remainder_poly.poly)}\n"
-                            
+
                             log_operation(st.session_state['operation_log'], entry)
                             st.session_state['last_operation_result'] = None  # Остаток уже выведен
                     except ZeroDivisionError:
@@ -287,14 +302,14 @@ if field:
                     except Exception as e:
                         st.error(f"Ошибка при выполнении операции: {e}")
 
-                if st.session_state.get('last_operation_result') is not None:
+                if st.session_state.get('last_operation_result_polynomial') is not None:
                     if st.button("Сохранить результат как новый многочлен", key="save_result_poly"):
-                        result = st.session_state['last_operation_result']
+                        result = st.session_state['last_operation_result_polynomial']
                         poly_id = len(st.session_state['polynomials_simple']) + 1
                         poly_name = f"Многочлен {poly_id}"
                         st.session_state['polynomials_simple'][poly_name] = result
                         st.success(f"Результат сохранен как {poly_name}: {format_polynomial(result.poly)}")
-                        st.session_state['last_operation_result'] = None
+                        st.session_state['last_operation_result_polynomial'] = None
                         st.rerun()
 
     st.header("Операции")
@@ -316,7 +331,8 @@ if field:
         el1 = st.session_state['field_elements_simple'][el1_name]
         el2 = st.session_state['field_elements_simple'][el2_name]
 
-        operation = st.selectbox("Выберите операцию", ["Сложение", "Вычитание", "Умножение", "Деление"], key="operation_select")
+        operation = st.selectbox("Выберите операцию", ["Сложение", "Вычитание", "Умножение", "Деление"],
+                                 key="operation_select")
 
         if st.button("Вычислить"):
             result = None
@@ -330,7 +346,7 @@ if field:
                 elif operation == "Деление":
                     result = el1 / el2
                 if result:
-                    st.session_state['last_operation_result'] = result
+                    st.session_state['last_operation_result_element'] = result
                     if field_type == 'Расширение поля':
                         st.write(f"Результат: {format_polynomial(result.poly)}")
                         entry = f"Операция: {operation}\nПоле: {field}\n{el1_name}: {format_polynomial(el1.poly)}\n{el2_name}: {format_polynomial(el2.poly)}\nРезультат: {format_polynomial(result.poly)}\n"
@@ -344,9 +360,9 @@ if field:
             except Exception as e:
                 st.error(f"Ошибка при вычислении: {e}")
 
-        if st.session_state.get('last_operation_result') is not None:
+        if st.session_state.get('last_operation_result_element') is not None:
             if st.button("Сохранить результат как новый элемент", key="save_result_element"):
-                result = st.session_state['last_operation_result']
+                result = st.session_state['last_operation_result_element']
                 element_id = len(st.session_state['field_elements_simple']) + 1
                 element_name = f"Элемент {element_id}"
                 st.session_state['field_elements_simple'][element_name] = result
@@ -354,7 +370,7 @@ if field:
                     st.success(f"Результат сохранен как {element_name}: {format_polynomial(result.poly)}")
                 else:
                     st.success(f"Результат сохранен как {element_name}: {result.value}")
-                st.session_state['last_operation_result'] = None
+                st.session_state['last_operation_result_element'] = None
                 st.rerun()
 
     st.header("Обратные элементы")
@@ -372,22 +388,21 @@ if field:
             if st.button("Найти обратный"):
                 try:
                     inverse_el = el_inv.inverse()
-                    st.session_state['last_inverse_result'] = inverse_el
+                    st.session_state['last_inverse_result_polynomial'] = inverse_el
                     st.write(f"Обратный элемент для {el_inv_name}: {format_polynomial(inverse_el.poly)}")
                     entry = f"Операция: Нахождение обратного элемента\nПоле: {field}\nЭлемент: {format_polynomial(el_inv.poly)}\nОбратный элемент: {format_polynomial(inverse_el.poly)}\n"
                     log_operation(st.session_state['operation_log'], entry)
                 except Exception as e:
                     st.error("Этот элемент не имеет обратного.")
 
-
-            if st.session_state.get('last_inverse_result') is not None:
-                if st.button("Сохранить обратный элемент как новый элемент", key="save_inverse_element"):
-                    inverse_el = st.session_state['last_inverse_result']
+            if st.session_state.get('last_inverse_result_polynomial') is not None:
+                if st.button("Сохранить обратный элемент как новый многочлен", key="save_inverse_element_poly"):
+                    inverse_el = st.session_state['last_inverse_result_polynomial']
                     element_id = len(st.session_state['field_elements_simple']) + 1
                     element_name = f"Элемент {element_id}"
                     st.session_state['field_elements_simple'][element_name] = inverse_el
                     st.success(f"Обратный элемент сохранен как {element_name}: {format_polynomial(inverse_el.poly)}")
-                    st.session_state['last_inverse_result'] = None
+                    st.session_state['last_inverse_result_polynomial'] = None
                     st.rerun()
 
     elif field_type == 'Простое поле':
@@ -396,7 +411,8 @@ if field:
         if not element_names:
             st.info("Добавьте элементы поля для нахождения обратных.")
         else:
-            el_inv_name = st.selectbox("Выберите элемент для нахождения обратного", element_names, key="el_inv_select_simple")
+            el_inv_name = st.selectbox("Выберите элемент для нахождения обратного", element_names,
+                                       key="el_inv_select_simple")
 
             el_inv = st.session_state['field_elements_simple'][el_inv_name]
 
@@ -404,23 +420,23 @@ if field:
                 try:
                     inverse_el = el_inv.inverse()
 
-                    st.session_state['last_inverse_result'] = inverse_el
+                    st.session_state['last_inverse_result_element'] = inverse_el
                     st.write(f"Обратный элемент для {el_inv_name}: {inverse_el.value}")
 
                     entry = f"Операция: Нахождение обратного элемента\nПоле: {field}\nЭлемент: {el_inv.value}\nОбратный элемент: {inverse_el.value}\n"
-                    
+
                     log_operation(st.session_state['operation_log'], entry)
                 except Exception as e:
                     st.error("Этот элемент не имеет обратного.")
 
-            if st.session_state.get('last_inverse_result') is not None:
-                if st.button("Сохранить обратный элемент как новый элемент", key="save_inverse_element_simple"):
-                    inverse_el = st.session_state['last_inverse_result']
+            if st.session_state.get('last_inverse_result_element') is not None:
+                if st.button("Сохранить обратный элемент как новый элемент", key="save_inverse_element"):
+                    inverse_el = st.session_state['last_inverse_result_element']
                     element_id = len(st.session_state['field_elements_simple']) + 1
                     element_name = f"Элемент {element_id}"
                     st.session_state['field_elements_simple'][element_name] = inverse_el
                     st.success(f"Обратный элемент сохранен как {element_name}: {inverse_el.value}")
-                    st.session_state['last_inverse_result'] = None
+                    st.session_state['last_inverse_result_element'] = None
                     st.rerun()
 
     if field_type == 'Расширение поля':
@@ -436,7 +452,8 @@ if field:
                 "Введите значение для подстановки (коэффициенты многочлена через запятую):",
                 key="x_value_input"
             )
-            x_value_file = st.file_uploader("Или загрузите значение для подстановки из файла:", type=["txt"], key="x_value_file")
+            x_value_file = st.file_uploader("Или загрузите значение для подстановки из файла:", type=["txt"],
+                                            key="x_value_file")
 
             if x_value_file is not None:
                 try:
@@ -448,12 +465,14 @@ if field:
                 try:
                     x_coeffs = [int(c.strip()) % p for c in x_value_input.split(',')]
                     if len(x_coeffs) > len(field.modulus_polynomial.coeffs) - 1:
-                        st.warning(f"Максимальная степень элемента поля: {len(field.modulus_polynomial.coeffs) - 2}. Привожу многочлен по модулю.")
+                        st.warning(
+                            f"Максимальная степень элемента поля: {len(field.modulus_polynomial.coeffs) - 2}. Привожу многочлен по модулю.")
                     x_element = field.create_element(x_coeffs)
                     result = el_eval.calculate_value(x_element)
 
                     st.session_state['last_evaluation_result'] = result
-                    st.write(f"Значение {format_polynomial(el_eval.poly)} при {format_polynomial(x_element.poly)}: {format_polynomial(result.poly)}")
+                    st.write(
+                        f"Значение {format_polynomial(el_eval.poly)} при {format_polynomial(x_element.poly)}: {format_polynomial(result.poly)}")
 
                     entry = f"Операция: Вычисление значения многочлена\nПоле: {field}\nМногочлен: {format_polynomial(el_eval.poly)}\nЗначение: {format_polynomial(x_element.poly)}\nРезультат: {format_polynomial(result.poly)}\n"
                     log_operation(st.session_state['operation_log'], entry)
@@ -473,16 +492,18 @@ if field:
         else:
             selected_poly_name = st.selectbox("Выберите многочлен", poly_names, key="selected_poly")
             selected_poly = st.session_state['polynomials_simple'][selected_poly_name]
-            selected_element_name = st.selectbox("Выберите элемент для подстановки", element_names, key="selected_element")
+            selected_element_name = st.selectbox("Выберите элемент для подстановки", element_names,
+                                                 key="selected_element")
             selected_element = st.session_state['field_elements_simple'][selected_element_name]
 
             if st.button("Вычислить значение"):
                 try:
                     result = selected_poly.calculate_value(selected_element)
 
-                    st.write(f"При x = {selected_element.value}, значение {format_polynomial(selected_poly.poly)} = {result.value}")
+                    st.write(
+                        f"При x = {selected_element.value}, значение {format_polynomial(selected_poly.poly)} = {result.value}")
                     entry = f"Операция: Вычисление значения многочлена над GF({p})\nМногочлен: {format_polynomial(selected_poly.poly)}\nЭлемент для подстановки: {selected_element.value}\nРезультат: {result.value}\n"
-                    
+
                     log_operation(st.session_state['operation_log'], entry)
                 except Exception as e:
                     print(e)
