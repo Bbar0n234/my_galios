@@ -151,16 +151,16 @@ if field:
         if st.button("Добавить элемент"):
             try:
                 new_coeffs = [int(c.strip()) % p for c in new_poly_input.split(',')]
+
                 if len(new_coeffs) > len(field.modulus_polynomial.coeffs) - 1:
                     st.warning(
                         f"Максимальная степень элемента поля: {len(field.modulus_polynomial.coeffs) - 2}. Привожу многочлен по модулю.")
                 element = field.create_element(new_coeffs)
 
-                element_id = len(st.session_state['field_elements_simple']) + 1
-                element_name = f"Элемент {element_id}"
+                element_name = format_polynomial(element.poly)
 
                 st.session_state['field_elements_simple'][element_name] = element
-                st.success(f"Добавлен {element_name}: {format_polynomial(element.poly)}")
+                st.success(f"Добавлен элемент {format_polynomial(element.poly)}")
 
             except ValueError as e:
                 st.error(str(e))
@@ -173,11 +173,11 @@ if field:
             try:
                 element = field.create_element(new_element_value)
 
-                element_id = len(st.session_state['field_elements_simple']) + 1
-                element_name = f"Элемент {element_id}"
+                element_name = str(element.value)
+
 
                 st.session_state['field_elements_simple'][element_name] = element
-                st.success(f"Добавлен {element_name}: {element.value}")
+                st.success(f"Добавлен элемент {element.value}")
             except Exception as e:
                 st.error("Ошибка при добавлении элемента.")
 
@@ -186,7 +186,7 @@ if field:
         for name, element in st.session_state['field_elements_simple'].items():
             cols = st.columns([4, 1])
             with cols[0]:
-                st.write(f"{name}: {format_polynomial(element.poly)}")
+                st.write(f"{format_polynomial(element.poly)}")
             with cols[1]:
                 if st.button("Удалить", key=f"del_{name}"):
                     del st.session_state['field_elements_simple'][name]
@@ -197,14 +197,14 @@ if field:
         for name, element in st.session_state['field_elements_simple'].items():
             cols = st.columns([4, 1])
             with cols[0]:
-                st.write(f"{name}: {element.value}")
+                st.write(f"{element.value}")
             with cols[1]:
                 if st.button("Удалить", key=f"del_{name}"):
                     del st.session_state['field_elements_simple'][name]
                     st.success(f"{name} был удалён.")
                     st.rerun()
 
-                    # Дополнительный раздел для работы с многочленами в простом поле
+    # Дополнительный раздел для работы с многочленами в простом поле
     if field_type == 'Простое поле':
         st.header("Работа с многочленами над GF(p)")
 
@@ -226,11 +226,10 @@ if field:
                 coeffs = [int(c.strip()) for c in poly_input.split(',')]  #
                 poly = field.create_polynom(coeffs)
 
-                poly_id = len(st.session_state['polynomials_simple']) + 1
-                poly_name = f"Многочлен {poly_id}"
+                poly_name = format_polynomial(poly.poly)
 
                 st.session_state['polynomials_simple'][poly_name] = poly
-                st.success(f"Добавлен {poly_name}: {format_polynomial(poly.poly)}")
+                st.success(f"Добавлен {format_polynomial(poly.poly)}")
             except ValueError:
                 st.error("Некорректный ввод коэффициентов многочлена.")
             except Exception as e:
@@ -241,7 +240,7 @@ if field:
             for name, poly in st.session_state['polynomials_simple'].items():
                 cols = st.columns([4, 1])
                 with cols[0]:
-                    st.write(f"{name}: {format_polynomial(poly.poly)}")
+                    st.write(f"{format_polynomial(poly.poly)}")
                 with cols[1]:
                     if st.button("Удалить", key=f"del_poly_{name}"):
                         del st.session_state['polynomials_simple'][name]
@@ -305,10 +304,12 @@ if field:
                 if st.session_state.get('last_operation_result_polynomial') is not None:
                     if st.button("Сохранить результат как новый многочлен", key="save_result_poly"):
                         result = st.session_state['last_operation_result_polynomial']
-                        poly_id = len(st.session_state['polynomials_simple']) + 1
-                        poly_name = f"Многочлен {poly_id}"
+
+                        poly_name = format_polynomial(result.poly)
+
                         st.session_state['polynomials_simple'][poly_name] = result
                         st.success(f"Результат сохранен как {poly_name}: {format_polynomial(result.poly)}")
+
                         st.session_state['last_operation_result_polynomial'] = None
                         st.rerun()
 
@@ -363,13 +364,15 @@ if field:
         if st.session_state.get('last_operation_result_element') is not None:
             if st.button("Сохранить результат как новый элемент", key="save_result_element"):
                 result = st.session_state['last_operation_result_element']
-                element_id = len(st.session_state['field_elements_simple']) + 1
-                element_name = f"Элемент {element_id}"
-                st.session_state['field_elements_simple'][element_name] = result
+
                 if field_type == 'Расширение поля':
-                    st.success(f"Результат сохранен как {element_name}: {format_polynomial(result.poly)}")
+                    element_name = format_polynomial(result.poly)
                 else:
-                    st.success(f"Результат сохранен как {element_name}: {result.value}")
+                    element_name = result.value
+
+                st.session_state['field_elements_simple'][element_name] = result
+
+                st.success(f"Результат сохранен как {element_name}")
                 st.session_state['last_operation_result_element'] = None
                 st.rerun()
 
@@ -398,10 +401,12 @@ if field:
             if st.session_state.get('last_inverse_result_polynomial') is not None:
                 if st.button("Сохранить обратный элемент как новый многочлен", key="save_inverse_element_poly"):
                     inverse_el = st.session_state['last_inverse_result_polynomial']
-                    element_id = len(st.session_state['field_elements_simple']) + 1
-                    element_name = f"Элемент {element_id}"
+
+                    element_name = format_polynomial(inverse_el.poly)
+
                     st.session_state['field_elements_simple'][element_name] = inverse_el
-                    st.success(f"Обратный элемент сохранен как {element_name}: {format_polynomial(inverse_el.poly)}")
+                    st.success(f"Обратный элемент сохранен как {element_name}")
+
                     st.session_state['last_inverse_result_polynomial'] = None
                     st.rerun()
 
@@ -432,10 +437,11 @@ if field:
             if st.session_state.get('last_inverse_result_element') is not None:
                 if st.button("Сохранить обратный элемент как новый элемент", key="save_inverse_element"):
                     inverse_el = st.session_state['last_inverse_result_element']
-                    element_id = len(st.session_state['field_elements_simple']) + 1
-                    element_name = f"Элемент {element_id}"
+                    element_name = inverse_el.value
+
                     st.session_state['field_elements_simple'][element_name] = inverse_el
                     st.success(f"Обратный элемент сохранен как {element_name}: {inverse_el.value}")
+
                     st.session_state['last_inverse_result_element'] = None
                     st.rerun()
 
@@ -506,7 +512,6 @@ if field:
 
                     log_operation(st.session_state['operation_log'], entry)
                 except Exception as e:
-                    print(e)
                     st.error("Ошибка при вычислении значения многочлена.")
 
 else:
