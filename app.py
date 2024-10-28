@@ -1,5 +1,10 @@
+import os
+
 import streamlit as st
+
 from sympy import isprime
+
+
 from core import GaloisFieldExtension, GaloisFieldSimple
 from core import format_polynomial
 
@@ -173,7 +178,7 @@ if field:
             try:
                 element = field.create_element(new_element_value)
 
-                element_name = str(element.value)
+                element_name = element.value
 
 
                 st.session_state['field_elements_simple'][element_name] = element
