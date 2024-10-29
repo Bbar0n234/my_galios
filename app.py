@@ -4,7 +4,6 @@ import streamlit as st
 
 from sympy import isprime
 
-
 from core import GaloisFieldExtension, GaloisFieldSimple
 from core import format_polynomial
 
@@ -52,6 +51,9 @@ p = st.number_input("Введите характеристику p (просто
 
 if not isprime(p):
     st.error(f"{p} не является простым числом! Пожалуйста, введите простое число.")
+    # Логирование ошибки: некорректное значение p
+    entry = f"Ошибка: Некорректная характеристика поля p={p} (непростое число)."
+    log_operation(st.session_state['operation_log'], entry)
     p = None
 
 field = None
@@ -68,12 +70,19 @@ if field_type == 'Расширение поля':
             coeffs_input = modulus_file.read().decode('utf-8')
         except Exception as e:
             st.error("Ошибка при чтении файла с коэффициентами неприводимого многочлена.")
+            # Логирование исключения при чтении файла
+            entry = f"Ошибка при чтении файла с коэффициентами неприводимого многочлена: {str(e)}. Содержимое файла: {modulus_file.name}"
+            log_operation(st.session_state['operation_log'], entry)
 
     # Парсинг коэффициентов
     try:
         modulus_coeffs = [int(c.strip()) % p for c in coeffs_input.split(',')] if p else None
-    except ValueError:
+    except ValueError as e:
         modulus_coeffs = None
+        st.error("Некорректный ввод коэффициентов многочлена.")
+        # Логирование исключения при парсинге коэффициентов
+        entry = f"Ошибка при парсинге коэффициентов многочлена: {str(e)}. Введённые коэффициенты: '{coeffs_input}'"
+        log_operation(st.session_state['operation_log'], entry)
 
     # Проверка изменения поля
     field_changed = False
@@ -95,6 +104,9 @@ if field_type == 'Расширение поля':
     if modulus_coeffs is not None and p:
         if len(modulus_coeffs) < 3:
             st.error("Многочлен должен иметь степень как минимум 2 (введите как минимум 3 коэффициента).")
+            # Логирование ошибки: недостаточная степень многочлена
+            entry = f"Ошибка: Многочлен степени {len(modulus_coeffs)-1} недостаточно высок для расширения поля GF({p}^n). Коэффициенты: {modulus_coeffs}"
+            log_operation(st.session_state['operation_log'], entry)
         else:
             try:
                 field = GaloisFieldExtension(p, modulus_coeffs)
@@ -104,13 +116,25 @@ if field_type == 'Расширение поля':
                 st.write(format_polynomial(field.modulus_polynomial))
             except ValueError as e:
                 st.error(str(e))
+                # Логирование исключения при создании поля
+                entry = f"Ошибка при создании расширения поля GF({p}^n) с коэффициентами {modulus_coeffs}: {str(e)}"
+                log_operation(st.session_state['operation_log'], entry)
             except Exception as e:
                 st.error("Ошибка при создании поля.")
+                # Логирование общего исключения при создании поля
+                entry = f"Неизвестная ошибка при создании расширения поля GF({p}^n) с коэффициентами {modulus_coeffs}: {str(e)}"
+                log_operation(st.session_state['operation_log'], entry)
     else:
         if modulus_coeffs is None and p:
             st.error("Пожалуйста, введите корректные целые числа для коэффициентов неприводимого многочлена.")
+            # Логирование ошибки: некорректные коэффициенты
+            entry = f"Ошибка: Некорректные коэффициенты неприводимого многочлена. Введённые коэффициенты: '{coeffs_input}'"
+            log_operation(st.session_state['operation_log'], entry)
         elif p is None:
             st.info("Пожалуйста, введите корректную характеристику поля p.")
+            # Логирование информации о необходимости ввода p
+            entry = "Информация: Требуется корректная характеристика поля p для продолжения."
+            log_operation(st.session_state['operation_log'], entry)
 
 elif field_type == 'Простое поле':
     modulus_coeffs = None
@@ -131,10 +155,19 @@ elif field_type == 'Простое поле':
         st.session_state['last_evaluation_result'] = None
 
     if p:
-        field = GaloisFieldSimple(p)
-        st.success(f"Поле {field} успешно создано.")
+        try:
+            field = GaloisFieldSimple(p)
+            st.success(f"Поле {field} успешно создано.")
+        except Exception as e:
+            st.error("Ошибка при создании простого поля.")
+            # Логирование исключения при создании простого поля
+            entry = f"Ошибка при создании простого поля GF({p}): {str(e)}"
+            log_operation(st.session_state['operation_log'], entry)
     else:
         st.info("Пожалуйста, введите корректную характеристику поля p.")
+        # Логирование информации о необходимости ввода p
+        entry = "Информация: Требуется корректная характеристика поля p для продолжения."
+        log_operation(st.session_state['operation_log'], entry)
 
 if field:
     st.header("Элементы поля")
@@ -152,6 +185,9 @@ if field:
                 new_poly_input = new_poly_file.read().decode('utf-8')
             except Exception as e:
                 st.error("Ошибка при чтении файла с коэффициентами элемента.")
+                # Логирование исключения при чтении файла элемента
+                entry = f"Ошибка при чтении файла с коэффициентами элемента: {str(e)}. Содержимое файла: {new_poly_file.name}"
+                log_operation(st.session_state['operation_log'], entry)
 
         if st.button("Добавить элемент"):
             try:
@@ -166,11 +202,16 @@ if field:
 
                 st.session_state['field_elements_simple'][element_name] = element
                 st.success(f"Добавлен элемент {format_polynomial(element.poly)}")
-
             except ValueError as e:
                 st.error(str(e))
+                # Логирование исключения при добавлении элемента
+                entry = f"Ошибка при добавлении элемента поля GF({p}^n): {str(e)}. Введённые коэффициенты: '{new_poly_input}'"
+                log_operation(st.session_state['operation_log'], entry)
             except Exception as e:
                 st.error("Некорректный ввод коэффициентов многочлена.")
+                # Логирование общего исключения при добавлении элемента
+                entry = f"Ошибка при добавлении элемента поля GF({p}^n): {str(e)}. Введённые коэффициенты: '{new_poly_input}'"
+                log_operation(st.session_state['operation_log'], entry)
     else:
         new_element_value = st.number_input("Введите значение нового элемента поля:", step=1, key="new_element")
 
@@ -180,11 +221,13 @@ if field:
 
                 element_name = element.value
 
-
                 st.session_state['field_elements_simple'][element_name] = element
                 st.success(f"Добавлен элемент {element.value}")
             except Exception as e:
                 st.error("Ошибка при добавлении элемента.")
+                # Логирование исключения при добавлении элемента
+                entry = f"Ошибка при добавлении элемента поля GF({p}): {str(e)}. Введённое значение: {new_element_value}"
+                log_operation(st.session_state['operation_log'], entry)
 
     if field_type == 'Расширение поля' and st.session_state['field_elements_simple']:
         st.subheader("Список элементов поля")
@@ -196,6 +239,9 @@ if field:
                 if st.button("Удалить", key=f"del_{name}"):
                     del st.session_state['field_elements_simple'][name]
                     st.success(f"{name} был удалён.")
+                    # Логирование удаления элемента
+                    entry = f"Удаление элемента поля GF({p}^n): {name}"
+                    log_operation(st.session_state['operation_log'], entry)
                     st.rerun()
     elif field_type == 'Простое поле' and st.session_state['field_elements_simple']:
         st.subheader("Список элементов поля")
@@ -207,6 +253,9 @@ if field:
                 if st.button("Удалить", key=f"del_{name}"):
                     del st.session_state['field_elements_simple'][name]
                     st.success(f"{name} был удалён.")
+                    # Логирование удаления элемента
+                    entry = f"Удаление элемента поля GF({p}): {name}"
+                    log_operation(st.session_state['operation_log'], entry)
                     st.rerun()
 
     # Дополнительный раздел для работы с многочленами в простом поле
@@ -225,6 +274,9 @@ if field:
                 poly_input = poly_file.read().decode('utf-8')
             except Exception as e:
                 st.error("Ошибка при чтении файла с коэффициентами многочлена.")
+                # Логирование исключения при чтении файла многочлена
+                entry = f"Ошибка при чтении файла с коэффициентами многочлена: {str(e)}. Содержимое файла: {poly_file.name}"
+                log_operation(st.session_state['operation_log'], entry)
 
         if st.button("Добавить многочлен"):
             try:
@@ -235,10 +287,16 @@ if field:
 
                 st.session_state['polynomials_simple'][poly_name] = poly
                 st.success(f"Добавлен {format_polynomial(poly.poly)}")
-            except ValueError:
+            except ValueError as e:
                 st.error("Некорректный ввод коэффициентов многочлена.")
+                # Логирование исключения при добавлении многочлена
+                entry = f"Ошибка при добавлении многочлена над GF({p}): {str(e)}. Введённые коэффициенты: '{poly_input}'"
+                log_operation(st.session_state['operation_log'], entry)
             except Exception as e:
                 st.error("Ошибка при добавлении многочлена.")
+                # Логирование общего исключения при добавлении многочлена
+                entry = f"Ошибка при добавлении многочлена над GF({p}): {str(e)}. Введённые коэффициенты: '{poly_input}'"
+                log_operation(st.session_state['operation_log'], entry)
 
         if st.session_state['polynomials_simple']:
             st.subheader("Список многочленов")
@@ -250,6 +308,9 @@ if field:
                     if st.button("Удалить", key=f"del_poly_{name}"):
                         del st.session_state['polynomials_simple'][name]
                         st.success(f"{name} был удалён.")
+                        # Логирование удаления многочлена
+                        entry = f"Удаление многочлена над GF({p}): {name}"
+                        log_operation(st.session_state['operation_log'], entry)
                         st.rerun()
 
         st.header("Операции с многочленами над GF(p)")
@@ -258,6 +319,9 @@ if field:
             poly_names = list(st.session_state['polynomials_simple'].keys())
             if len(poly_names) < 2:
                 st.info("Добавьте как минимум два многочлена для выполнения операций.")
+                # Логирование информации о недостатке многочленов для операций
+                entry = "Информация: Недостаточно многочленов для выполнения операций. Требуется минимум два."
+                log_operation(st.session_state['operation_log'], entry)
             else:
                 poly1_name = st.selectbox("Выберите первый многочлен", poly_names, key="poly1_op")
                 poly2_name = st.selectbox("Выберите второй многочлен", poly_names, key="poly2_op")
@@ -303,8 +367,14 @@ if field:
                             st.session_state['last_operation_result'] = None  # Остаток уже выведен
                     except ZeroDivisionError:
                         st.error("Деление на ноль.")
+                        # Логирование деления на ноль
+                        entry = f"Ошибка: Деление многочленов. Делитель: {format_polynomial(poly2.poly)} (деление на ноль)."
+                        log_operation(st.session_state['operation_log'], entry)
                     except Exception as e:
                         st.error(f"Ошибка при выполнении операции: {e}")
+                        # Логирование общего исключения при выполнении операции
+                        entry = f"Ошибка при выполнении операции '{poly_operation}' над многочленами {format_polynomial(poly1.poly)} и {format_polynomial(poly2.poly)}: {str(e)}"
+                        log_operation(st.session_state['operation_log'], entry)
 
                 if st.session_state.get('last_operation_result_polynomial') is not None:
                     if st.button("Сохранить результат как новый многочлен", key="save_result_poly"):
@@ -324,8 +394,14 @@ if field:
 
     if len(element_names) < 2 and field_type == 'Расширение поля':
         st.info("Добавьте как минимум два элемента для выполнения операций.")
+        # Логирование информации о недостатке элементов для операций
+        entry = "Информация: Недостаточно элементов для выполнения операций. Требуется минимум два."
+        log_operation(st.session_state['operation_log'], entry)
     elif len(element_names) < 1 and field_type == 'Простое поле':
         st.info("Добавьте как минимум два элемента для выполнения операций.")
+        # Логирование информации о недостатке элементов для операций
+        entry = "Информация: Недостаточно элементов для выполнения операций. Требуется минимум один."
+        log_operation(st.session_state['operation_log'], entry)
     else:
         if field_type == 'Расширение поля':
             el1_name = st.selectbox("Выберите первый элемент", element_names, key="el1_op")
@@ -363,8 +439,14 @@ if field:
                     log_operation(st.session_state['operation_log'], entry)
             except ZeroDivisionError:
                 st.error("Деление на ноль.")
+                # Логирование деления на ноль
+                entry = f"Ошибка: Деление элемента {el1_name} на элемент {el2_name} (деление на ноль)."
+                log_operation(st.session_state['operation_log'], entry)
             except Exception as e:
                 st.error(f"Ошибка при вычислении: {e}")
+                # Логирование общего исключения при вычислении операции
+                entry = f"Ошибка при выполнении операции '{operation}' над элементами {el1_name} и {el2_name}: {str(e)}"
+                log_operation(st.session_state['operation_log'], entry)
 
         if st.session_state.get('last_operation_result_element') is not None:
             if st.button("Сохранить результат как новый элемент", key="save_result_element"):
@@ -378,6 +460,10 @@ if field:
                 st.session_state['field_elements_simple'][element_name] = result
 
                 st.success(f"Результат сохранен как {element_name}")
+                # Логирование сохранения результата операции
+                entry = f"Сохранение результата операции как нового элемента: {element_name}"
+                log_operation(st.session_state['operation_log'], entry)
+
                 st.session_state['last_operation_result_element'] = None
                 st.rerun()
 
@@ -388,6 +474,9 @@ if field:
         element_names = list(st.session_state['field_elements_simple'].keys())
         if not element_names:
             st.info("Добавьте элементы поля для нахождения обратных.")
+            # Логирование информации о необходимости добавления элементов для нахождения обратных
+            entry = "Информация: Нет элементов поля для нахождения обратных элементов."
+            log_operation(st.session_state['operation_log'], entry)
         else:
             el_inv_name = st.selectbox("Выберите элемент для нахождения обратного", element_names, key="el_inv_select")
 
@@ -402,6 +491,9 @@ if field:
                     log_operation(st.session_state['operation_log'], entry)
                 except Exception as e:
                     st.error("Этот элемент не имеет обратного.")
+                    # Логирование отсутствия обратного элемента
+                    entry = f"Ошибка: Невозможно найти обратный элемент для {format_polynomial(el_inv.poly)} в поле {field}. Причина: {str(e)}"
+                    log_operation(st.session_state['operation_log'], entry)
 
             if st.session_state.get('last_inverse_result_polynomial') is not None:
                 if st.button("Сохранить обратный элемент как новый многочлен", key="save_inverse_element_poly"):
@@ -412,6 +504,10 @@ if field:
                     st.session_state['field_elements_simple'][element_name] = inverse_el
                     st.success(f"Обратный элемент сохранен как {element_name}")
 
+                    # Логирование сохранения обратного элемента
+                    entry = f"Сохранение обратного элемента как нового элемента: {element_name}"
+                    log_operation(st.session_state['operation_log'], entry)
+
                     st.session_state['last_inverse_result_polynomial'] = None
                     st.rerun()
 
@@ -420,6 +516,9 @@ if field:
         element_names = list(st.session_state['field_elements_simple'].keys())
         if not element_names:
             st.info("Добавьте элементы поля для нахождения обратных.")
+            # Логирование информации о необходимости добавления элементов для нахождения обратных
+            entry = "Информация: Нет элементов поля для нахождения обратных элементов."
+            log_operation(st.session_state['operation_log'], entry)
         else:
             el_inv_name = st.selectbox("Выберите элемент для нахождения обратного", element_names,
                                        key="el_inv_select_simple")
@@ -438,6 +537,9 @@ if field:
                     log_operation(st.session_state['operation_log'], entry)
                 except Exception as e:
                     st.error("Этот элемент не имеет обратного.")
+                    # Логирование отсутствия обратного элемента
+                    entry = f"Ошибка: Невозможно найти обратный элемент для {el_inv.value} в поле {field}. Причина: {str(e)}"
+                    log_operation(st.session_state['operation_log'], entry)
 
             if st.session_state.get('last_inverse_result_element') is not None:
                 if st.button("Сохранить обратный элемент как новый элемент", key="save_inverse_element"):
@@ -445,7 +547,12 @@ if field:
                     element_name = inverse_el.value
 
                     st.session_state['field_elements_simple'][element_name] = inverse_el
+
                     st.success(f"Обратный элемент сохранен как {element_name}: {inverse_el.value}")
+
+                    # Логирование сохранения обратного элемента
+                    entry = f"Сохранение обратного элемента как нового элемента: {element_name}"
+                    log_operation(st.session_state['operation_log'], entry)
 
                     st.session_state['last_inverse_result_element'] = None
                     st.rerun()
@@ -456,6 +563,9 @@ if field:
         element_names = list(st.session_state['field_elements_simple'].keys())
         if not element_names:
             st.info("Добавьте элементы поля для выполнения вычислений.")
+            # Логирование информации о необходимости добавления элементов для вычислений
+            entry = "Информация: Нет элементов поля для выполнения вычислений."
+            log_operation(st.session_state['operation_log'], entry)
         else:
             el_eval_name = st.selectbox("Выберите элемент для вычисления", element_names, key="el_eval_select")
             el_eval = st.session_state['field_elements_simple'][el_eval_name]
@@ -471,6 +581,9 @@ if field:
                     x_value_input = x_value_file.read().decode('utf-8')
                 except Exception as e:
                     st.error("Ошибка при чтении файла со значением для подстановки.")
+                    # Логирование исключения при чтении файла значения для подстановки
+                    entry = f"Ошибка при чтении файла со значением для подстановки: {str(e)}. Содержимое файла: {x_value_file.name}"
+                    log_operation(st.session_state['operation_log'], entry)
 
             if st.button("Вычислить значение"):
                 try:
@@ -489,6 +602,9 @@ if field:
                     log_operation(st.session_state['operation_log'], entry)
                 except Exception as e:
                     st.error("Некорректный ввод значения для вычисления.")
+                    # Логирование исключения при вычислении значения многочлена
+                    entry = f"Ошибка при вычислении значения многочлена: {str(e)}. Многочлен: {format_polynomial(el_eval.poly)}, Значение для подстановки: '{x_value_input}'"
+                    log_operation(st.session_state['operation_log'], entry)
 
     # Дополнительный раздел для работы с многочленами в простом поле
     if field_type == 'Простое поле' and st.session_state['polynomials_simple']:
@@ -498,8 +614,14 @@ if field:
         element_names = list(st.session_state['field_elements_simple'].keys())
         if not poly_names:
             st.info("Добавьте многочлены для выполнения вычислений.")
+            # Логирование информации о необходимости добавления многочленов
+            entry = "Информация: Нет многочленов для выполнения вычислений."
+            log_operation(st.session_state['operation_log'], entry)
         elif not element_names:
             st.info("Добавьте элементы поля для выполнения вычислений.")
+            # Логирование информации о необходимости добавления элементов
+            entry = "Информация: Нет элементов поля для выполнения вычислений."
+            log_operation(st.session_state['operation_log'], entry)
         else:
             selected_poly_name = st.selectbox("Выберите многочлен", poly_names, key="selected_poly")
             selected_poly = st.session_state['polynomials_simple'][selected_poly_name]
@@ -518,9 +640,15 @@ if field:
                     log_operation(st.session_state['operation_log'], entry)
                 except Exception as e:
                     st.error("Ошибка при вычислении значения многочлена.")
+                    # Логирование исключения при вычислении значения многочлена
+                    entry = f"Ошибка при вычислении значения многочлена: {str(e)}. Многочлен: {format_polynomial(selected_poly.poly)}, Элемент для подстановки: {selected_element.value}"
+                    log_operation(st.session_state['operation_log'], entry)
 
 else:
     st.info("Пожалуйста, определите поле для продолжения.")
+    # Логирование информации о необходимости определения поля
+    entry = "Информация: Необходимо определить поле Галуа для продолжения работы."
+    log_operation(st.session_state['operation_log'], entry)
 
 if st.session_state['operation_log']:
     operation_log_str = "\n".join(st.session_state['operation_log'])

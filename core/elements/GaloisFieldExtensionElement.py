@@ -3,7 +3,11 @@ from __future__ import annotations
 import numpy as np
 from typing import List
 
-from .functions import mod_polynomial, inverse_polynomial
+from .functions import (
+    mod_polynomial,
+    inverse_polynomial,
+    fft_multiply_polynomials,
+)
 
 
 class GaloisFieldExtensionElement:
@@ -64,8 +68,17 @@ class GaloisFieldExtensionElement:
 
         return GaloisFieldExtensionElement(self.p, result_poly.coeffs, self.modulus_poly)
 
-    def __mul__(self, other: GaloisFieldExtensionElement) -> GaloisFieldExtensionElement:
-        result_poly = self.poly * other.poly
+    def __mul__(self, other: 'GaloisFieldExtensionElement') -> 'GaloisFieldExtensionElement':
+        if self.p != other.p or not np.array_equal(self.modulus_poly.coeffs, other.modulus_poly.coeffs):
+            raise ValueError("Элементы принадлежат разным полям.")
+
+        # Умножение многочленов с помощью FFT
+        product_coeffs = fft_multiply_polynomials(self.poly.coeffs.tolist(), other.poly.coeffs.tolist())
+
+        # Приведение по модулю многочлена, задающего поле
+        result_poly = mod_polynomial(np.poly1d(product_coeffs), self.modulus_poly, self.p)
+
+        return GaloisFieldExtensionElement(self.p, result_poly.coeffs.tolist(), self.modulus_poly)
 
         return GaloisFieldExtensionElement(self.p, result_poly.coeffs, self.modulus_poly)
 

@@ -1,5 +1,8 @@
 import numpy as np
-from .functions import format_polynomial
+from .functions import (
+    format_polynomial,
+    fft_multiply_polynomials,
+)
 from .GaloisFieldSimpleElement import GaloisFieldSimpleElement
 
 
@@ -57,14 +60,15 @@ class GaloisFieldSimplePolynom:
 
         return GaloisFieldSimplePolynom(result_coeffs, self.p)
 
-    def __mul__(self, other):
-
+    def __mul__(self, other: 'GaloisFieldSimplePolynom') -> 'GaloisFieldSimplePolynom':
         if self.p != other.p:
             raise ValueError("Многочлены из разных полей нельзя умножать")
-        
-        product = np.polymul(self.poly, other.poly)
 
-        product_coeffs = [int(c) % self.p for c in product.coeffs]
+        # Умножение многочленов с помощью FFT
+        product_coeffs = fft_multiply_polynomials(self.poly.coeffs.tolist(), other.poly.coeffs.tolist())
+
+        # Приведение каждого коэффициента по модулю p
+        product_coeffs = [c % self.p for c in product_coeffs]
 
         return GaloisFieldSimplePolynom(product_coeffs, self.p)
 

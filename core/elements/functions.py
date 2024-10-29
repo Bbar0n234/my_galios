@@ -1,4 +1,55 @@
 import numpy as np
+from typing import List
+
+
+def fft_multiply_polynomials(coeffs1: List[int], coeffs2: List[int]) -> List[int]:
+    """
+    Умножает два многочлена с помощью FFT и возвращает коэффициенты результата.
+
+    :param coeffs1: Коэффициенты первого многочлена (от старшей степени к младшей).
+    :param coeffs2: Коэффициенты второго многочлена (от старшей степени к младшей).
+    :return: Коэффициенты результирующего многочлена (от старшей степени к младшей).
+    """
+    # Переворачиваем коэффициенты для удобства (от младшей степени к старшей)
+    A = np.array(coeffs1[::-1], dtype=np.float64)
+    B = np.array(coeffs2[::-1], dtype=np.float64)
+
+    n = 1
+    while n < len(A) + len(B):
+        n <<= 1  # Удваиваем до ближайшей степени двойки
+
+    A = np.pad(A, (0, n - len(A)), 'constant')
+    B = np.pad(B, (0, n - len(B)), 'constant')
+
+    # Выполняем FFT
+    FA = np.fft.fft(A)
+    FB = np.fft.fft(B)
+
+    # Поэлементное умножение в частотной области
+    FC = FA * FB
+
+    # Обратное FFT
+    C = np.fft.ifft(FC)
+
+    # Округление и приведение к целым числам
+    C = np.round(C.real).astype(np.int64)
+
+    # Обработка переноса
+    carry = 0
+    for i in range(len(C)):
+        total = C[i] + carry
+        C[i] = total % 10  # Предполагается десятичная система; замените на нужную
+        carry = total // 10
+
+    # Преобразуем обратно к порядку от старшей степени к младшей
+    C = C[:len(A) + len(B) - 1]  # Обрезаем лишние нули
+    result_coeffs = C[::-1].tolist()
+
+    # Удаляем ведущие нули
+    while len(result_coeffs) > 1 and result_coeffs[0] == 0:
+        result_coeffs.pop(0)
+
+    return result_coeffs
 
 
 def format_polynomial(poly: np.poly1d) -> str:
