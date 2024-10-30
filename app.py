@@ -1,12 +1,58 @@
-import os
-
 import streamlit as st
+import numpy as np
 
 from sympy import isprime
 
-from core import GaloisFieldExtension, GaloisFieldSimple
-from core import format_polynomial
+from core import (
+    GaloisFieldExtension,
+    GaloisFieldSimple,
+    find_irreducible_polynomials_batch,
+    format_polynomial
+)
 
+import streamlit.components.v1 as components
+
+def create_copy_button(text, button_id):
+    # HTML и JavaScript для кнопки копирования с подсветкой при нажатии
+    copy_button_html = f"""
+    <style>
+    .copy-button {{
+        background-color: #4CAF50; /* Зеленый */
+        border: none;
+        color: white;
+        padding: 5px 10px;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 14px;
+        margin: 4px 2px;
+        cursor: pointer;
+        border-radius: 4px;
+        transition: background-color 0.3s;
+    }}
+    .copy-button.copied {{
+        background-color: #555555; /* Темно-серый при копировании */
+    }}
+    </style>
+    <button class="copy-button" onclick="copyToClipboard('poly_{button_id}', this)">Скопировать</button>
+    <input type="hidden" value="{text}" id="poly_{button_id}">
+    <script>
+    function copyToClipboard(elementId, btn) {{
+        var copyText = document.getElementById(elementId).value;
+        navigator.clipboard.writeText(copyText).then(function() {{
+            /* Копирование успешно */
+            btn.classList.add('copied');
+            setTimeout(function() {{
+                btn.classList.remove('copied');
+            }}, 500); 
+        }}, function(err) {{
+            /* Копирование не удалось */
+            // Можно добавить обработку ошибок, если необходимо
+        }});
+    }}
+    </script>
+    """
+    components.html(copy_button_html, height=60, scrolling=False)
 
 # Функция для добавления записи в лог
 def log_operation(operation_log, entry):
@@ -40,21 +86,35 @@ if 'last_evaluation_result' not in st.session_state:
 if 'operation_log' not in st.session_state:
     st.session_state['operation_log'] = []
 
+if 'irreducible_pols' not in st.session_state:
+    st.session_state['irreducible_pols'] = []
+if 'offset' not in st.session_state:
+    st.session_state['offset'] = 0
+if 'batch_size' not in st.session_state:
+    st.session_state['batch_size'] = 50
+if 'p_irreducible' not in st.session_state:
+    st.session_state['p_irreducible'] = None
+if 'n_irreducible' not in st.session_state:
+    st.session_state['n_irreducible'] = None
+
 st.title("Калькулятор поля Галуа GF(p^n)")
 
-field_type = st.radio("Выберите тип поля", ('Расширение поля', 'Простое поле'))
+field_type = st.radio("Выберите тип поля", ('Расширение поля', 'Простое поле', 'Поиск неприводимых многочленов'))
 st.session_state['field_type'] = field_type
 
-st.header("Определение поля")
+if field_type != 'Поиск неприводимых многочленов':
+    st.header("Определение поля")
 
-p = st.number_input("Введите характеристику p (простое число):", min_value=2, value=2, step=1)
+if field_type in ["Расширение поля", "Простое поле"]:
 
-if not isprime(p):
-    st.error(f"{p} не является простым числом! Пожалуйста, введите простое число.")
-    # Логирование ошибки: некорректное значение p
-    entry = f"Ошибка: Некорректная характеристика поля p={p} (непростое число)."
-    log_operation(st.session_state['operation_log'], entry)
-    p = None
+    p = st.number_input("Введите характеристику p (простое число):", min_value=2, value=2, step=1)
+
+    if not isprime(p):
+        st.error(f"{p} не является простым числом! Пожалуйста, введите простое число.")
+        # Логирование ошибки: некорректное значение p
+        entry = f"Ошибка: Некорректная характеристика поля p={p} (непростое число)."
+        log_operation(st.session_state['operation_log'], entry)
+        p = None
 
 field = None
 
@@ -169,6 +229,81 @@ elif field_type == 'Простое поле':
         entry = "Информация: Требуется корректная характеристика поля p для продолжения."
         log_operation(st.session_state['operation_log'], entry)
 
+elif field_type == 'Поиск неприводимых многочленов':
+    st.header("Поиск неприводимых многочленов")
+
+    p_irreducible = st.number_input("Введите характеристику p (простое число):", min_value=2, value=2, step=1, key='p_irreducible_input')
+    n_irreducible = st.number_input("Введите степень многочлена n:", min_value=1, value=3, step=1, key='n_irreducible_input')
+
+    # Check if p is prime
+    if not isprime(p_irreducible):
+        st.error(f"{p_irreducible} не является простым числом! Пожалуйста, введите простое число.")
+        p_irreducible = None
+
+    if st.button("Поиск неприводимых многочленов"):
+        if p_irreducible is None:
+            st.error("Введите корректное простое число p.")
+        else:
+            # Initialize the variables
+            st.session_state['p_irreducible'] = int(p_irreducible)
+            st.session_state['n_irreducible'] = int(n_irreducible)
+            st.session_state['offset'] = 0
+            st.session_state['irreducible_pols'] = []
+            st.session_state['batch_size'] = 100
+
+            # Get the first batch of polynomials
+            with st.spinner("Поиск неприводимых многочленов..."):
+                irreducible_polys = find_irreducible_polynomials_batch(
+                    st.session_state['p_irreducible'],
+                    st.session_state['n_irreducible'],
+                    st.session_state['batch_size'],
+                    st.session_state['offset']
+                )
+                st.session_state['irreducible_pols'].extend(irreducible_polys)
+                st.session_state['offset'] += st.session_state['batch_size']
+
+    # Check if p or n has changed to reset the state
+    if (st.session_state.get('p_irreducible') != p_irreducible or
+        st.session_state.get('n_irreducible') != n_irreducible):
+        if p_irreducible is not None:
+            st.session_state['p_irreducible'] = int(p_irreducible)
+        else:
+            st.session_state['p_irreducible'] = None
+        st.session_state['n_irreducible'] = int(n_irreducible)
+        st.session_state['offset'] = 0
+        st.session_state['irreducible_pols'] = []
+
+    # Display the polynomials found so far
+    if st.session_state['irreducible_pols']:
+        st.write(f"Найдено {len(st.session_state['irreducible_pols'])} неприводимых многочленов:")
+        for idx, poly_coeffs in enumerate(st.session_state['irreducible_pols']):
+            curr_irr_p = st.session_state['p_irreducible']
+
+            poly_coeffs = [coef % curr_irr_p for coef in poly_coeffs]
+            degree = len(poly_coeffs) - 1
+
+            poly = np.poly1d(poly_coeffs)
+            st.write(f"{format_polynomial(poly)}")
+            create_copy_button(", ".join(map(str, poly_coeffs)), f"{idx}_{curr_irr_p}_{degree}")
+
+        # Button to get more polynomials
+        if st.button("Ещё"):
+            with st.spinner("Поиск неприводимых многочленов..."):
+                irreducible_polys = find_irreducible_polynomials_batch(
+                    st.session_state['p_irreducible'],
+                    st.session_state['n_irreducible'],
+                    st.session_state['batch_size'],
+                    st.session_state['offset']
+                )
+                if irreducible_polys:
+                    st.session_state['irreducible_pols'].extend(irreducible_polys)
+                    st.session_state['offset'] += st.session_state['batch_size']
+                else:
+                    st.write("Больше неприводимых многочленов не найдено.")
+
+                st.rerun()
+
+
 if field:
     st.header("Элементы поля")
 
@@ -243,6 +378,7 @@ if field:
                     entry = f"Удаление элемента поля GF({p}^n): {name}"
                     log_operation(st.session_state['operation_log'], entry)
                     st.rerun()
+
     elif field_type == 'Простое поле' and st.session_state['field_elements_simple']:
         st.subheader("Список элементов поля")
         for name, element in st.session_state['field_elements_simple'].items():
@@ -556,6 +692,7 @@ if field:
 
                     st.session_state['last_inverse_result_element'] = None
                     st.rerun()
+        
 
     if field_type == 'Расширение поля':
         st.header("Вычисление значений многочленов")
@@ -644,9 +781,8 @@ if field:
                     entry = f"Ошибка при вычислении значения многочлена: {str(e)}. Многочлен: {format_polynomial(selected_poly.poly)}, Элемент для подстановки: {selected_element.value}"
                     log_operation(st.session_state['operation_log'], entry)
 
-else:
+elif field_type != "Поиск неприводимых многочленов":
     st.info("Пожалуйста, определите поле для продолжения.")
-    # Логирование информации о необходимости определения поля
     entry = "Информация: Необходимо определить поле Галуа для продолжения работы."
     log_operation(st.session_state['operation_log'], entry)
 
