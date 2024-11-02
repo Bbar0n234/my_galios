@@ -751,6 +751,7 @@ if field:
 
                     log_operation(st.session_state['operation_log'], entry)
                 except Exception as e:
+                    print(e)
                     st.error("Ошибка при вычислении значения многочлена.")
                     
                     entry = f"Ошибка при вычислении значения многочлена: {str(e)}. Многочлен: {format_polynomial(selected_poly.poly)}, Элемент для подстановки: {selected_element.value}"

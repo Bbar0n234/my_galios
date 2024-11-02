@@ -34,14 +34,11 @@ def create_copy_button(text, button_id):
     function copyToClipboard(elementId, btn) {{
         var copyText = document.getElementById(elementId).value;
         navigator.clipboard.writeText(copyText).then(function() {{
-            /* Копирование успешно */
             btn.classList.add('copied');
             setTimeout(function() {{
                 btn.classList.remove('copied');
-            }}, 500); // Сброс стиля через 1 секунду
+            }}, 500);
         }}, function(err) {{
-            /* Копирование не удалось */
-            // Можно добавить обработку ошибок, если необходимо
         }});
     }}
     </script>

@@ -20,7 +20,8 @@ class GaloisFieldSimplePolynom:
         self.poly = np.poly1d(coeffs)
         self.p = p
 
-    def _trim_coeffs(self, coeffs):
+    @staticmethod
+    def _trim_coeffs(coeffs):
         """
         Обрезает старшие нулевые коэффициенты (когда они пришли в результате выполнения операции других многочленов)
         """
@@ -64,10 +65,8 @@ class GaloisFieldSimplePolynom:
         if self.p != other.p:
             raise ValueError("Многочлены из разных полей нельзя умножать")
 
-        # Умножение многочленов с помощью FFT
         product_coeffs = fft_multiply_polynomials(self.poly.coeffs.tolist(), other.poly.coeffs.tolist())
 
-        # Приведение каждого коэффициента по модулю p
         product_coeffs = [c % self.p for c in product_coeffs]
 
         return GaloisFieldSimplePolynom(product_coeffs, self.p)
@@ -92,7 +91,7 @@ class GaloisFieldSimplePolynom:
     def __str__(self) -> str:
         return format_polynomial(self.poly)
 
-    def calculate_value(self, element: int) -> GaloisFieldSimpleElement:
+    def calculate_value(self, element: GaloisFieldSimpleElement) -> GaloisFieldSimpleElement:
         """
         Вычисляет значение многочлена в данной точке
         """
