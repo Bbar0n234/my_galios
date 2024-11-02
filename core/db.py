@@ -2,7 +2,9 @@ import sqlite3
 
 
 def initialize_database(db_path='irreducible_polynomials.db'):
-    """Создает базу данных и таблицу, если они не существуют."""
+    """
+    Создает базу данных и таблицу, если они не существуют.
+    """
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     cursor.execute('''

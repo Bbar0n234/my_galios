@@ -1,6 +1,6 @@
+import os
 from sympy import symbols, Poly
-from multiprocessing import Pool, cpu_count
-
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 def is_irreducible(args):
     p, coeffs = args
@@ -29,15 +29,11 @@ def find_irreducible_polynomials_batch(p, n, batch_size, offset=0):
         coeffs = coeffs[::-1]
         args.append((p, tuple(coeffs)))
 
-    num_processes = cpu_count()
-    pool = Pool(processes=num_processes)
-    results = pool.imap_unordered(is_irreducible, args, chunksize=1000)
-    pool.close()
-
-    for res in results:
-        if res is not None:
-            irreducible_polynomials.append(res)
-
-    pool.join()
+    with ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
+        future_to_args = {executor.submit(is_irreducible, arg): arg for arg in args}
+        for future in as_completed(future_to_args):
+            res = future.result()
+            if res is not None:
+                irreducible_polynomials.append(res)
 
     return irreducible_polynomials

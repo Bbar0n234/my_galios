@@ -38,14 +38,13 @@ def fft_multiply_polynomials(coeffs1: List[int], coeffs2: List[int]) -> List[int
     carry = 0
     for i in range(len(C)):
         total = C[i] + carry
-        C[i] = total % 10  # Предполагается десятичная система; замените на нужную
+        C[i] = total % 10
         carry = total // 10
 
     # Преобразуем обратно к порядку от старшей степени к младшей
-    C = C[:len(A) + len(B) - 1]  # Обрезаем лишние нули
+    C = C[:len(A) + len(B) - 1]
     result_coeffs = C[::-1].tolist()
 
-    # Удаляем ведущие нули
     while len(result_coeffs) > 1 and result_coeffs[0] == 0:
         result_coeffs.pop(0)
 
