@@ -2,6 +2,7 @@ import numpy as np
 from .functions import (
     format_polynomial,
     fft_multiply_polynomials,
+    karatsuba_multiply,
 )
 from .GaloisFieldSimpleElement import GaloisFieldSimpleElement
 
@@ -65,7 +66,7 @@ class GaloisFieldSimplePolynom:
         if self.p != other.p:
             raise ValueError("Многочлены из разных полей нельзя умножать")
 
-        product_coeffs = fft_multiply_polynomials(self.poly.coeffs.tolist(), other.poly.coeffs.tolist())
+        product_coeffs = karatsuba_multiply(self.poly.coeffs.tolist(), other.poly.coeffs.tolist(), self.p)
 
         product_coeffs = [c % self.p for c in product_coeffs]
 

@@ -245,6 +245,7 @@ elif operating_mode == finding_poly_name:
                     st.session_state['batch_size'],
                     st.session_state['offset']
                 )
+
                 if irreducible_polys:
                     st.session_state['irreducible_pols'].extend(irreducible_polys)
                     st.session_state['offset'] += st.session_state['batch_size']
@@ -253,7 +254,6 @@ elif operating_mode == finding_poly_name:
                 else:
                     st.write("Больше неприводимых многочленов не найдено.")
 
-                st.rerun()
 elif operating_mode == load_db_name:
     st.header("Загрузить многочлены из Базы Данных")
 

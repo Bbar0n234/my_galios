@@ -1,6 +1,96 @@
 import numpy as np
 from typing import List
 
+from typing import List
+
+
+def karatsuba_multiply(coeffs1: List[int], coeffs2: List[int], p: int) -> List[int]:
+    """
+    Умножает два многочлена с использованием алгоритма Карацубы с приведением по модулю p.
+
+    :param coeffs1: Коэффициенты первого многочлена (от младшей степени к старшей).
+    :param coeffs2: Коэффициенты второго многочлена (от младшей степени к старшей).
+    :param p: Модуль для конечного поля.
+    :return: Коэффициенты результирующего многочлена (от младшей степени к старшей).
+    """
+    n = max(len(coeffs1), len(coeffs2))
+
+    # Для выхода из рекурсии, когда многочлены уже достаточно малой степени
+    if n <= 1:
+        return multiply_naive(coeffs1, coeffs2, p)
+
+    # Деление степени пополам
+    m = n // 2
+
+    # Разделяем многочлены на младшие и старшие части
+    low1 = coeffs1[:m]
+    high1 = coeffs1[m:]
+    low2 = coeffs2[:m]
+    high2 = coeffs2[m:]
+
+    # Рекурсивное умножение
+    z0 = karatsuba_multiply(low1, low2, p)
+    z2 = karatsuba_multiply(high1, high2, p)
+
+    # Сложение младших и старших частей
+    sum1 = [(a + b) % p for a, b in zip_extended(low1, high1)]
+    sum2 = [(a + b) % p for a, b in zip_extended(low2, high2)]
+
+    # Рекурсивное умножение сумм
+    z1 = karatsuba_multiply(sum1, sum2, p)
+
+    # Вычитание z0 и z2 из z1
+    z1 = [(c - a - b) % p for c, a, b in zip_extended(z1, z0, z2)]
+
+    # Сборка итогового многочлена
+    result = [0] * (len(z0) + 2 * m)
+
+    for i in range(len(z0)):
+        result[i] = (result[i] + z0[i]) % p
+    for i in range(len(z1)):
+        result[i + m] = (result[i + m] + z1[i]) % p
+    for i in range(len(z2)):
+        result[i + 2 * m] = (result[i + 2 * m] + z2[i]) % p
+
+    # Удаление ведущих нулей
+    while len(result) > 1 and result[-1] == 0:
+        result.pop()
+
+    return result
+
+
+def multiply_naive(coeffs1: List[int], coeffs2: List[int], p: int) -> List[int]:
+    """
+    Наивное умножение двух многочленов с приведением по модулю p.
+
+    :param coeffs1: Коэффициенты первого многочлена (от младшей степени к старшей).
+    :param coeffs2: Коэффициенты второго многочлена (от младшей степени к старшей).
+    :param p: Модуль для конечного поля.
+    :return: Коэффициенты результирующего многочлена (от младшей степени к старшей).
+    """
+    result_degree = len(coeffs1) + len(coeffs2) - 1
+    result = [0] * result_degree
+    for i in range(len(coeffs1)):
+        for j in range(len(coeffs2)):
+            result[i + j] = (result[i + j] + coeffs1[i] * coeffs2[j]) % p
+    # Удаляем ведущие нули
+    while len(result) > 1 and result[-1] == 0:
+        result.pop()
+    return result
+
+
+def zip_extended(*args):
+    """
+    Функция для сложения списков разной длины.
+
+    :param args: Много списков для сложения.
+    :return: Список кортежей.
+    """
+    max_len = max(len(arg) for arg in args)
+    extended_args = [arg + [0] * (max_len - len(arg)) for arg in args]
+    return zip(*extended_args)
+
+
 
 def fft_multiply_polynomials(coeffs1: List[int], coeffs2: List[int]) -> List[int]:
     """

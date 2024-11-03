@@ -7,6 +7,7 @@ from .functions import (
     mod_polynomial,
     inverse_polynomial,
     fft_multiply_polynomials,
+    karatsuba_multiply,
     format_polynomial,
 )
 
@@ -73,7 +74,7 @@ class GaloisFieldExtensionElement:
         if self.p != other.p or not np.array_equal(self.modulus_poly.coeffs, other.modulus_poly.coeffs):
             raise ValueError("Элементы принадлежат разным полям.")
 
-        product_coeffs = fft_multiply_polynomials(self.poly.coeffs.tolist(), other.poly.coeffs.tolist())
+        product_coeffs = karatsuba_multiply(self.poly.coeffs.tolist(), other.poly.coeffs.tolist(), self.p)
         result_poly = mod_polynomial(np.poly1d(product_coeffs), self.modulus_poly, self.p)
 
         return GaloisFieldExtensionElement(self.p, result_poly.coeffs, self.modulus_poly)
