@@ -1,7 +1,7 @@
-import os
-import sys
-import warnings
-warnings.filterwarnings("ignore", message="missing ScriptRunContext")
+import streamlit
+
+import streamlit.web.cli as stcli
+import os, sys
 
 # Проверяем, если программа запущена через PyInstaller
 if getattr(sys, 'frozen', False):
@@ -13,5 +13,11 @@ else:
 
 app_path = os.path.join(base_path, "app.py")
 
-if __name__ == '__main__':
-    os.system(f"streamlit run {app_path}")
+if __name__ == "__main__":
+    sys.argv = [
+        "streamlit",
+        "run",
+        app_path,
+        "--global.developmentMode=false",
+    ]
+    sys.exit(stcli.main())

@@ -19,7 +19,6 @@ def karatsuba_multiply(coeffs1: List[int], coeffs2: List[int], p: int) -> List[i
     if n <= 1:
         return multiply_naive(coeffs1, coeffs2, p)
 
-    # Деление степени пополам
     m = n // 2
 
     # Разделяем многочлены на младшие и старшие части
