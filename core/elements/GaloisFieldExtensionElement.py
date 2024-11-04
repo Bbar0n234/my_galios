@@ -6,7 +6,6 @@ from typing import List, Union
 from .functions import (
     mod_polynomial,
     inverse_polynomial,
-    fft_multiply_polynomials,
     karatsuba_multiply,
     format_polynomial,
 )

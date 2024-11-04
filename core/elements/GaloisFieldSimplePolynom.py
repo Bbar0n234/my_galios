@@ -1,7 +1,6 @@
 import numpy as np
 from .functions import (
     format_polynomial,
-    fft_multiply_polynomials,
     karatsuba_multiply,
 )
 from .GaloisFieldSimpleElement import GaloisFieldSimpleElement
