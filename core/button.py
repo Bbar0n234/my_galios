@@ -5,7 +5,7 @@ def create_copy_button(text, button_id):
     copy_button_html = f"""
     <style>
     .copy-button {{
-        background-color: #4CAF50; /* Зеленый */
+        background-color: #4CAF50;
         border: none;
         color: white;
         padding: 5px 10px;
@@ -20,7 +20,7 @@ def create_copy_button(text, button_id):
         transition: background-color 0.3s;
     }}
     .copy-button.copied {{
-        background-color: #555555; /* Темно-серый при копировании */
+        background-color: #555555;
     }}
     .copy-button span {{
         margin-left: 5px;
