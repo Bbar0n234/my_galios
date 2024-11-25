@@ -7,6 +7,7 @@ from .functions import (
     mod_polynomial,
     inverse_polynomial,
     karatsuba_multiply,
+    multiply_naive,
     format_polynomial,
 )
 
@@ -74,6 +75,7 @@ class GaloisFieldExtensionElement:
             raise ValueError("Элементы принадлежат разным полям.")
 
         product_coeffs = karatsuba_multiply(self.poly.coeffs.tolist(), other.poly.coeffs.tolist(), self.p)
+
         result_poly = mod_polynomial(np.poly1d(product_coeffs), self.modulus_poly, self.p)
 
         return GaloisFieldExtensionElement(self.p, result_poly.coeffs, self.modulus_poly)

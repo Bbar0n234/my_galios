@@ -2,6 +2,7 @@ import numpy as np
 from .functions import (
     format_polynomial,
     karatsuba_multiply,
+    multiply_naive
 )
 from .GaloisFieldSimpleElement import GaloisFieldSimpleElement
 

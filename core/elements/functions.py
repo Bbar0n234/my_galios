@@ -5,54 +5,74 @@ from typing import List
 def karatsuba_multiply(coeffs1: List[int], coeffs2: List[int], p: int) -> List[int]:
     """
     Умножает два многочлена с использованием алгоритма Карацубы с приведением по модулю p.
-
-    :param coeffs1: Коэффициенты первого многочлена (от младшей степени к старшей).
-    :param coeffs2: Коэффициенты второго многочлена (от младшей степени к старшей).
+    Коэффициенты передаются от старшей степени к младшей.
+    
+    :param coeffs1: Коэффициенты первого многочлена (от старшей степени к младшей).
+    :param coeffs2: Коэффициенты второго многочлена (от старшей степени к младшей).
     :param p: Модуль для конечного поля.
-    :return: Коэффициенты результирующего многочлена (от младшей степени к старшей).
+    :return: Коэффициенты результирующего многочлена (от старшей степени к младшей).
     """
-    n = max(len(coeffs1), len(coeffs2))
-
-    # Для выхода из рекурсии, когда многочлены уже достаточно малой степени
-    if n <= 1:
-        return multiply_naive(coeffs1, coeffs2, p)
-
-    m = n // 2
-
-    # Разделяем многочлены на младшие и старшие части
-    low1 = coeffs1[:m]
-    high1 = coeffs1[m:]
-    low2 = coeffs2[:m]
-    high2 = coeffs2[m:]
-
-    # Рекурсивное умножение
-    z0 = karatsuba_multiply(low1, low2, p)
-    z2 = karatsuba_multiply(high1, high2, p)
-
-    # Сложение младших и старших частей
-    sum1 = [(a + b) % p for a, b in zip_extended(low1, high1)]
-    sum2 = [(a + b) % p for a, b in zip_extended(low2, high2)]
-
-    # Рекурсивное умножение сумм
-    z1 = karatsuba_multiply(sum1, sum2, p)
-
-    # Вычитание z0 и z2 из z1
-    z1 = [(c - a - b) % p for c, a, b in zip_extended(z1, z0, z2)]
-
-    # Сборка итогового многочлена
-    result = [0] * (len(z0) + 2 * m)
-
-    for i in range(len(z0)):
-        result[i] = (result[i] + z0[i]) % p
-    for i in range(len(z1)):
-        result[i + m] = (result[i + m] + z1[i]) % p
-    for i in range(len(z2)):
-        result[i + 2 * m] = (result[i + 2 * m] + z2[i]) % p
-
-    # Удаление ведущих нулей
-    while len(result) > 1 and result[-1] == 0:
-        result.pop()
-
+    # Переворачиваем коэффициенты для удобства (младшая к старшей)
+    coeffs1_rev = coeffs1[::-1]
+    coeffs2_rev = coeffs2[::-1]
+    
+    def karatsuba_recursive(a: List[int], b: List[int], p: int) -> List[int]:
+        n = max(len(a), len(b))
+        
+        # Добавляем нули, чтобы длины были равны и равны степени двойки
+        while len(a) < n:
+            a.append(0)
+        while len(b) < n:
+            b.append(0)
+        
+        # Выход из рекурсии, когда многочлены уже достаточно малой степени
+        if n <= 1:
+            return multiply_naive(a, b, p)
+        
+        m = n // 2
+        
+        # Разделяем многочлены на младшие и старшие части
+        low1 = a[:m]
+        high1 = a[m:]
+        low2 = b[:m]
+        high2 = b[m:]
+        
+        # Рекурсивное умножение
+        z0 = karatsuba_recursive(low1, low2, p)
+        z2 = karatsuba_recursive(high1, high2, p)
+        
+        # Сложение младших и старших частей
+        sum1 = [(x + y) % p for x, y in zip_extended(low1, high1)]
+        sum2 = [(x + y) % p for x, y in zip_extended(low2, high2)]
+        
+        # Рекурсивное умножение сумм
+        z1 = karatsuba_recursive(sum1, sum2, p)
+        
+        # Вычитание z0 и z2 из z1
+        z1 = [(c - a - b) % p for c, a, b in zip_extended(z1, z0, z2)]
+        
+        # Сборка итогового многочлена
+        result = [0] * (2 * n)
+        
+        for i in range(len(z0)):
+            result[i] = (result[i] + z0[i]) % p
+        for i in range(len(z1)):
+            result[i + m] = (result[i + m] + z1[i]) % p
+        for i in range(len(z2)):
+            result[i + 2 * m] = (result[i + 2 * m] + z2[i]) % p
+        
+        # Удаление ведущих нулей
+        while len(result) > 1 and result[-1] == 0:
+            result.pop()
+        
+        return result
+    
+    # Запуск рекурсивного умножения
+    result_rev = karatsuba_recursive(coeffs1_rev.copy(), coeffs2_rev.copy(), p)
+    
+    # Переворачиваем обратно к старшей степени
+    result = result_rev[::-1]
+    
     return result
 
 
@@ -60,19 +80,31 @@ def multiply_naive(coeffs1: List[int], coeffs2: List[int], p: int) -> List[int]:
     """
     Наивное умножение двух многочленов с приведением по модулю p.
 
-    :param coeffs1: Коэффициенты первого многочлена (от младшей степени к старшей).
-    :param coeffs2: Коэффициенты второго многочлена (от младшей степени к старшей).
+    :param coeffs1: Коэффициенты первого многочлена (от старшей степени к младшей).
+    :param coeffs2: Коэффициенты второго многочлена (от старшей степени к младшей).
     :param p: Модуль для конечного поля.
-    :return: Коэффициенты результирующего многочлена (от младшей степени к старшей).
+    :return: Коэффициенты результирующего многочлена (от старшей степени к младшей).
     """
-    result_degree = len(coeffs1) + len(coeffs2) - 1
-    result = [0] * result_degree
-    for i in range(len(coeffs1)):
-        for j in range(len(coeffs2)):
-            result[i + j] = (result[i + j] + coeffs1[i] * coeffs2[j]) % p
-    # Удаляем ведущие нули
-    while len(result) > 1 and result[-1] == 0:
-        result.pop()
+    # Переворачиваем коэффициенты для удобства (младшая к старшей)
+    coeffs1_rev = coeffs1[::-1]
+    coeffs2_rev = coeffs2[::-1]
+
+    # Вычисляем степень результирующего многочлена
+    result_degree = len(coeffs1_rev) + len(coeffs2_rev) - 1
+    result_rev = [0] * result_degree
+
+    # Наивное умножение
+    for i in range(len(coeffs1_rev)):
+        for j in range(len(coeffs2_rev)):
+            result_rev[i + j] = (result_rev[i + j] + coeffs1_rev[i] * coeffs2_rev[j]) % p
+
+    # Удаляем ведущие нули (в низшей степени после переворота)
+    while len(result_rev) > 1 and result_rev[-1] == 0:
+        result_rev.pop()
+
+    # Переворачиваем обратно к старшей степени
+    result = result_rev[::-1]
+
     return result
 
 
@@ -198,6 +230,7 @@ def mod_pow_polynomial(poly: np.poly1d, e: int, p: int, mod_poly: np.poly1d) -> 
     :param mod_poly: Модульный многочлен, по которому происходит деление.
     :return: Многочлен, возведённый в степень e по модулю mod_poly.
     """
+    
     result = np.poly1d([1])
     base = poly
 

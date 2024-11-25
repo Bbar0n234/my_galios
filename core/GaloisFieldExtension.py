@@ -59,8 +59,3 @@ class GaloisFieldExtension:
 
     def __str__(self) -> str:
         return f"GF({self.p}^{len(self.modulus_polynomial.coeffs) - 1})"
-
-    
-
-    
-
