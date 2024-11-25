@@ -1,3 +1,6 @@
+import os
+import time
+
 import pytest
 
 from typing import List
@@ -5,6 +8,7 @@ from typing import List
 from core import GaloisFieldSimple, GaloisFieldExtension
 
 from sage.all import *
+
 
 def normalize_coeffs(coeffs: List[int]) -> List[int]:
     """
@@ -18,10 +22,23 @@ def normalize_coeffs(coeffs: List[int]) -> List[int]:
         return []
     return coeffs
 
+
+def log_timing(degree: int, elapsed_time: float, filename: str = "timing_results_extension.txt"):
+    """
+    Записывает степень многочлена и время выполнения в указанный файл.
+
+    :param degree: Степень многочлена.
+    :param elapsed_time: Время выполнения в секундах.
+    :param filename: Имя файла для записи результатов.
+    """
+    with open(filename, 'a') as f:
+        f.write(f"{degree},{elapsed_time}\n")
+
+
 test_data_simple = {
     "simple_elements": [
-        {"field": 5, "a": 3, "b": 4, "expected_sum": 2, "expected_mul": 2},
-        {"field": 7, "a": 2, "b": 5, "expected_sum": 0, "expected_mul": 3},
+        {"field": 5, "a": 3, "b": 4, "Ожидалось_sum": 2, "Ожидалось_mul": 2},
+        {"field": 7, "a": 2, "b": 5, "Ожидалось_sum": 0, "Ожидалось_mul": 3},
     ],
     "polynomials": [
         {
@@ -43,86 +60,117 @@ test_data_simple = {
 test_data_extension = [
     {
         "field": 3,
-        "modulus": [1, 0, 1],  # x^2 + 1
-        "a_coeffs": [1, 1],    # a = x + 1
-        "b_coeffs": [1, 1],    # b = x + 1
+        "modulus": [1, 0, 1],
+        "a_coeffs": [1, 1],  
+        "b_coeffs": [1, 1],   
     },
     {
         "field": 2,
-        "modulus": [1, 1, 1],  # x^2 + x + 1
-        "a_coeffs": [1, 0],    # a = x
-        "b_coeffs": [1, 1],    # b = x + 1
+        "modulus": [1, 1, 1],  
+        "a_coeffs": [1, 0],   
+        "b_coeffs": [1, 1],    
     },
     {
         "field": 3,
-        "modulus": [1, 1, 2],  # x^2 + x + 2
-        "a_coeffs": [2, 0],    # a = 2x
-        "b_coeffs": [1, 2],    # b = x + 2
+        "modulus": [1, 1, 2],  
+        "a_coeffs": [2, 0],    
+        "b_coeffs": [1, 2],    
     },
 
         {
         "field": 3,
-        "modulus": [2, 1, 1, 1],  # x^3 + x^2 + x + 1
-        "a_coeffs": [2, 1],     # a = 2x^2 + x
-        "b_coeffs": [1, 2, 1],     # b = x^2 + 2x + 1
+        "modulus": [2, 1, 1, 1], 
+        "a_coeffs": [2, 1],     
+        "b_coeffs": [1, 2, 1],    
     },  
     {
         "field": 2,
-        "modulus": [1, 1, 0, 1],  # x^3 + x + 1
-        "a_coeffs": [1, 1, 1],     # a = x^2 + x + 1
-        "b_coeffs": [1, 0, 1],     # b = x^2 + 1
+        "modulus": [1, 1, 0, 1], 
+        "a_coeffs": [1, 1, 1],     
+        "b_coeffs": [1, 0, 1],    
     },
     {
         "field": 2,
-        "modulus": [1, 1, 0, 1],  # x^3 + x^2 + x + 1
-        "a_coeffs": [1, 0, 1],     # a = x^2 + 1
-        "b_coeffs": [1, 1, 0],     # b = x^2 + x
+        "modulus": [1, 1, 0, 1],  
+        "a_coeffs": [1, 0, 1],     
+        "b_coeffs": [1, 1, 0],     
     },
 
-    # # Примеры для поля GF(5^2) и GF(5^3)
     {
         "field": 5,
-        "modulus": [1, 2, 0, 1],  # x^3 + 2x + 1
-        "a_coeffs": [3, 4, 1],     # a = 3x^2 + 4x + 1
-        "b_coeffs": [1, 0, 2],     # b = x^2 + 2
+        "modulus": [1, 2, 0, 1], 
+        "a_coeffs": [3, 4, 1], 
+        "b_coeffs": [1, 0, 2], 
     },
     {
         "field": 5,
-        "modulus": [1, 0, 4, 2],  # x^3 + 1
-        "a_coeffs": [1, 0, 1],  # a = x^3 + 1
-        "b_coeffs": [2, 3, 1],  # b = 2x^3 + 3x^2 + 4x + 1
+        "modulus": [1, 0, 4, 2],
+        "a_coeffs": [1, 0, 1],
+        "b_coeffs": [2, 3, 1],
     },
     {
         "field": 5,
-        "modulus": [1, 0, 1, 3, 2],  # x^4 + x^3 + 2x^2 + 1
-        "a_coeffs": [1, 2, 3, 1],  # a = x^4 + 2x^3 + 3x^2 + 4x + 1
-        "b_coeffs": [2, 3, 1, 4],  # b = 2x^4 + 3x^3 + x^2 + 4
+        "modulus": [1, 0, 1, 3, 2],
+        "a_coeffs": [1, 2, 3, 1],
+        "b_coeffs": [2, 3, 1, 4],
     },
     {
         "field": 5,
-        "modulus": [1, 0, 1, 4, 1],  # x^4 + 4x^3 + 3x^2 + 2x + 1
-        "a_coeffs": [4, 2, 5, 1],     # a = 4x^3 + 2x^2 + 5x + 1 (Note: coefficients should be modulo 5)
-        "b_coeffs": [6, 1, 3, 2],     # b = 6x^3 + x^2 + 3x + 2 (Note: coefficients should be modulo 5)
+        "modulus": [1, 0, 1, 4, 1],
+        "a_coeffs": [4, 2, 5, 1],
+        "b_coeffs": [6, 1, 3, 2],
     },
 
-    # # Примеры для поля GF(7^2)
     {
         "field": 7,
-        "modulus": [1, 4, 1],  # x^2 + 3x + 2
-        "a_coeffs": [4, 5],    # a = 4x + 5
-        "b_coeffs": [2, 6],    # b = 2x + 6
+        "modulus": [1, 4, 1],
+        "a_coeffs": [4, 5],
+        "b_coeffs": [2, 6],
     },
     {
         "field": 7,
-        "modulus": [1, 0, 6, 2],  # x^3 + 4x + 1
-        "a_coeffs": [3, 2, 5],     # a = 3x^2 + 2x + 5
-        "b_coeffs": [1, 4, 3],     # b = x^2 + 4x + 3
+        "modulus": [1, 0, 6, 2],
+        "a_coeffs": [3, 2, 5],
+        "b_coeffs": [1, 4, 3],
     },
     {
         "field": 7,
-        "modulus": [1, 0, 1, 1, 1],  # x^4 + 2x^3 + 3x^2 + 4x + 1
-        "a_coeffs": [2, 1, 0, 4],  # a = 2x^4 + 3x^3 + x^2 + 4
-        "b_coeffs": [5, 2, 3, 4],  # b = 5x^4 + x^3 + 2x^2 + 3x + 4
+        "modulus": [1, 0, 1, 1, 1],
+        "a_coeffs": [2, 1, 0, 4],
+        "b_coeffs": [5, 2, 3, 4],
+    },
+    # Тесты на огромных значениях
+    {
+        "field": 2,
+        "modulus": [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 1],
+        "a_coeffs": [1, 1, 0, 1,1, 1, 0, 1,1, 1, 0, 1,1, 1, 0, 1,1, 1, 0, 1,],
+        "b_coeffs": [1, 0,0,1,1, 0,0,1,1, 0,0,1,1, 0,0,1,1, 0,0,1,1, 0,0,1,1, 0,0,1,],  
+    },
+    {
+        "field": 2,
+        "modulus": [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1],
+        "a_coeffs": [1, 1, 0, 1,1, 1, 0, 1,1, 1, 0, 0,0,1,1, 1,1, 1, 0, 1,1, 1, 0, 1,],
+        "b_coeffs": [1, 0,0,1,1, 0, 1, 0, 1,1, 1, 0,1,1, 0,0,1,1, 0,0,1,1, 0,0,1,1, 0,0,1,1, 0,0,1,],  
+    },
+    {
+        "field": 3,
+        "modulus": [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 2, 2],
+        "a_coeffs": [1, 2, 1, 1, 2, 1, 1, 2, 1, 1, 2, 1, 1, 2, 1,],
+        "b_coeffs": [1, 0, 1, 2, 1, 0, 1, 2, 1, 0, 1, 2, 1, 0, 1, 2, 1, 0, 1, 2],  
+    },
+
+    {
+        "field": 3,
+        "modulus": [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 2, 1],
+        "a_coeffs": [2, 2, 1, 0, 2, 2, 1, 0, 2, 2, 1, 0, 2, 2, 1, 0,],
+        "b_coeffs": [1, 2, 2, 0, 1, 2, 2, 0, 1, 2, 2, 0, 1, 2, 2, 0, 1, 2, 2, 0, 1, 2, 2, 0],  
+    },
+
+    {
+        "field": 5,
+        "modulus": [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 1, 3, 1],
+        "a_coeffs": [4, 3, 2, 4, 4, 3, 2, 4, 4, 3, 2, 4, 4, 3, 2, 4,],
+        "b_coeffs": [2, 3, 4, 2, 3, 4, 2, 3, 4, 2, 3, 4],  
     },
 ]
 
@@ -137,12 +185,12 @@ def test_galois_simple_elems(data):
     sum_result = a + b
     sum_value = sum_result.value
     sum_value = [] if sum_value == [0] else sum_value  # Обработка [0] -> []
-    assert sum_value == data["expected_sum"], f"Expected {data['expected_sum']}, got {sum_value}"
+    assert sum_value == data["Ожидалось_sum"], f"Ожидалось {data['Ожидалось_sum']}, получено {sum_value}"
 
     mul_result = a * b
     mul_value = mul_result.value
     mul_value = [] if mul_value == [0] else mul_value  # Обработка [0] -> []
-    assert mul_value == data["expected_mul"], f"Expected {data['expected_mul']}, got {mul_value}"
+    assert mul_value == data["Ожидалось_mul"], f"Ожидалось {data['Ожидалось_mul']}, получено {mul_value}"
 
 
 # Тесты для многочленов простого поля
@@ -175,7 +223,7 @@ def test_galois_simple_polys(data):
     sage_sum_coeffs = list(sage_sum_result.list()[::-1])
     sage_sum_coeffs = normalize_coeffs(sage_sum_coeffs)
 
-    assert my_sum_coeffs == sage_sum_coeffs, f"Expected {sage_sum_coeffs}, got {my_sum_coeffs}"
+    assert my_sum_coeffs == sage_sum_coeffs, f"Ожидалось {sage_sum_coeffs}, получено {my_sum_coeffs}"
 
     # Вычитание
     my_sub_result = P_my - Q_my
@@ -186,7 +234,7 @@ def test_galois_simple_polys(data):
     sage_sub_coeffs = list(sage_sub_result.list()[::-1])
     sage_sub_coeffs = normalize_coeffs(sage_sub_coeffs)
 
-    assert my_sub_coeffs == sage_sub_coeffs, f"Expected {sage_sub_coeffs}, got {my_sub_coeffs}"
+    assert my_sub_coeffs == sage_sub_coeffs, f"Ожидалось {sage_sub_coeffs}, получено {my_sub_coeffs}"
 
     # Умножение
     my_mul_result = P_my * Q_my
@@ -197,7 +245,7 @@ def test_galois_simple_polys(data):
     sage_mul_coeffs = list(sage_mul_result.list()[::-1])
     sage_mul_coeffs = normalize_coeffs(sage_mul_coeffs)
 
-    assert my_mul_coeffs == sage_mul_coeffs, f"Expected {sage_mul_coeffs}, got {my_mul_coeffs}"
+    assert my_mul_coeffs == sage_mul_coeffs, f"Ожидалось {sage_mul_coeffs}, получено {my_mul_coeffs}"
 
     # Деление
     my_div_result, my_remainder = P_my / Q_my
@@ -215,10 +263,10 @@ def test_galois_simple_polys(data):
     sage_rem_coeffs = normalize_coeffs(sage_rem_coeffs)
 
     assert my_div_coeffs == sage_div_coeffs, \
-        f"Expected {sage_div_coeffs}, got {my_div_coeffs}"
+        f"Ожидалось {sage_div_coeffs}, получено {my_div_coeffs}"
 
     assert my_remainder_coeffs == sage_rem_coeffs, \
-        f"Expected {sage_rem_coeffs}, got {my_remainder_coeffs}"
+        f"Ожидалось {sage_rem_coeffs}, получено {my_remainder_coeffs}"
 
     # Вычисление значения в заданной точке
     eval_point = data['eval_point']
@@ -233,8 +281,8 @@ def test_galois_simple_polys(data):
     my_eval_Q = Q_my.calculate_value(my_eval_point).value
 
 
-    assert sage_eval_P == my_eval_P, f"Expected {sage_eval_P}, got {my_eval_P}"
-    assert sage_eval_Q == my_eval_Q, f"Expected {sage_eval_Q}, got {my_eval_Q}"
+    assert sage_eval_P == my_eval_P, f"Ожидалось {sage_eval_P}, получено {my_eval_P}"
+    assert sage_eval_Q == my_eval_Q, f"Ожидалось {sage_eval_Q}, получено {my_eval_Q}"
 
 
 @pytest.mark.parametrize("data", test_data_extension)
@@ -257,6 +305,14 @@ def test_galois_field_extension(data):
     sage_a = sage_field(data["a_coeffs"][::-1])
     sage_b = sage_field(data["b_coeffs"][::-1])
 
+        # Определение степени многочленов
+    degree_a = len(data["a_coeffs"]) - 1
+    degree_b = len(data["b_coeffs"]) - 1
+    max_degree = max(degree_a, degree_b)
+
+    # Начало замера времени
+    start_time = time.perf_counter()
+
     # Сложение
     my_sum_result = a + b
     my_sum_coeffs = list(my_sum_result.poly.coefficients.tolist())
@@ -266,7 +322,7 @@ def test_galois_field_extension(data):
     sage_sum_coeffs = list(sage_sum_result.polynomial().coefficients(sparse=False)[::-1])
     sage_sum_coeffs = normalize_coeffs(sage_sum_coeffs)
 
-    assert my_sum_coeffs == sage_sum_coeffs, f"Expected sum {sage_sum_coeffs}, got {my_sum_coeffs}"
+    assert my_sum_coeffs == sage_sum_coeffs, f"Ожидалось {sage_sum_coeffs}, получено {my_sum_coeffs}"
 
     # Вычитание
     my_sub_result = a - b
@@ -277,7 +333,7 @@ def test_galois_field_extension(data):
     sage_sub_coeffs = list(sage_sub_result.polynomial().coefficients(sparse=False)[::-1])
     sage_sub_coeffs = normalize_coeffs(sage_sub_coeffs)
 
-    assert my_sub_coeffs == sage_sub_coeffs, f"Expected sub {sage_sub_coeffs}, got {my_sub_coeffs}"
+    assert my_sub_coeffs == sage_sub_coeffs, f"Ожидалось {sage_sub_coeffs}, получено {my_sub_coeffs}"
 
     # Умножение
     my_mul_result = a * b
@@ -288,7 +344,7 @@ def test_galois_field_extension(data):
     sage_mul_coeffs = list(sage_mul_result.polynomial().coefficients(sparse=False)[::-1])
     sage_mul_coeffs = normalize_coeffs(sage_mul_coeffs)
 
-    assert my_mul_coeffs == sage_mul_coeffs, f"Expected mul {sage_mul_coeffs}, got {my_mul_coeffs}"
+    assert my_mul_coeffs == sage_mul_coeffs, f"Ожидалось {sage_mul_coeffs}, получено {my_mul_coeffs}"
 
  # Деление
     if data["a_coeffs"] != data["b_coeffs"]:  # Деление на равные элементы не имеет смысла
@@ -298,7 +354,7 @@ def test_galois_field_extension(data):
         my_div_result = a / b
         my_div_coeffs = list(my_div_result.poly.coefficients.tolist())
 
-        assert my_div_coeffs == sage_div_coeffs, f"Expected div {sage_div_coeffs}, got {my_div_coeffs}"
+        assert my_div_coeffs == sage_div_coeffs, f"Ожидалось {sage_div_coeffs}, получено {my_div_coeffs}"
 
     # Нахождение обратного элемента
     if list(b.poly.coeffs) != [0]:  # Проверяем, что b не равно нулю
@@ -310,4 +366,11 @@ def test_galois_field_extension(data):
         sage_inv_coeffs = list(sage_inv_result.polynomial().coefficients(sparse=False)[::-1])
         sage_inv_coeffs = normalize_coeffs(sage_inv_coeffs)
 
-        assert my_inv_coeffs == sage_inv_coeffs, f"Expected inv {sage_inv_coeffs}, got {my_inv_coeffs}"
+        assert my_inv_coeffs == sage_inv_coeffs, f"Ожидалось {sage_inv_coeffs}, получено {my_inv_coeffs}"
+
+    # Конец замера времени
+    end_time = time.perf_counter()
+    elapsed_time = end_time - start_time
+
+    # Логирование результатов
+    log_timing(max_degree, elapsed_time)

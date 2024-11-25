@@ -6,7 +6,7 @@ def karatsuba_multiply(coeffs1: List[int], coeffs2: List[int], p: int) -> List[i
     """
     Умножает два многочлена с использованием алгоритма Карацубы с приведением по модулю p.
     Коэффициенты передаются от старшей степени к младшей.
-    
+
     :param coeffs1: Коэффициенты первого многочлена (от старшей степени к младшей).
     :param coeffs2: Коэффициенты второго многочлена (от старшей степени к младшей).
     :param p: Модуль для конечного поля.
@@ -16,18 +16,28 @@ def karatsuba_multiply(coeffs1: List[int], coeffs2: List[int], p: int) -> List[i
     coeffs1_rev = coeffs1[::-1]
     coeffs2_rev = coeffs2[::-1]
     
+    def zip_extended(*args):
+        """
+        Функция для сложения списков разной длины.
+        :param args: Много списков для сложения.
+        :return: Список кортежей.
+        """
+        max_len = max(len(arg) for arg in args)
+        extended_args = [arg + [0] * (max_len - len(arg)) for arg in args]
+        return zip(*extended_args)
+    
     def karatsuba_recursive(a: List[int], b: List[int], p: int) -> List[int]:
         n = max(len(a), len(b))
         
-        # Добавляем нули, чтобы длины были равны и равны степени двойки
+        # Добавляем нули, чтобы длины были равны
         while len(a) < n:
             a.append(0)
         while len(b) < n:
             b.append(0)
         
         # Выход из рекурсии, когда многочлены уже достаточно малой степени
-        if n <= 1:
-            return multiply_naive(a, b, p)
+        if n <= 3:
+            return multiply_naive(a, b, p, reverse=False)
         
         m = n // 2
         
@@ -38,8 +48,8 @@ def karatsuba_multiply(coeffs1: List[int], coeffs2: List[int], p: int) -> List[i
         high2 = b[m:]
         
         # Рекурсивное умножение
-        z0 = karatsuba_recursive(low1, low2, p)
-        z2 = karatsuba_recursive(high1, high2, p)
+        z0 = karatsuba_recursive(low1.copy(), low2.copy(), p)
+        z2 = karatsuba_recursive(high1.copy(), high2.copy(), p)
         
         # Сложение младших и старших частей
         sum1 = [(x + y) % p for x, y in zip_extended(low1, high1)]
@@ -76,18 +86,30 @@ def karatsuba_multiply(coeffs1: List[int], coeffs2: List[int], p: int) -> List[i
     return result
 
 
-def multiply_naive(coeffs1: List[int], coeffs2: List[int], p: int) -> List[int]:
+def multiply_naive(coeffs1: List[int], coeffs2: List[int], p: int, reverse: bool = False) -> List[int]:
     """
     Наивное умножение двух многочленов с приведением по модулю p.
 
-    :param coeffs1: Коэффициенты первого многочлена (от старшей степени к младшей).
-    :param coeffs2: Коэффициенты второго многочлена (от старшей степени к младшей).
+    :param coeffs1: Коэффициенты первого многочлена.
+                    Если reverse=True, то коэффициенты передаются от старшей степени к младшей.
+                    Если reverse=False, то от младшей степени к старшей.
+    :param coeffs2: Коэффициенты второго многочлена.
+                    Если reverse=True, то коэффициенты передаются от старшей степени к младшей.
+                    Если reverse=False, то от младшей степени к старшей.
     :param p: Модуль для конечного поля.
-    :return: Коэффициенты результирующего многочлена (от старшей степени к младшей).
+    :param reverse: Флаг, указывающий порядок коэффициентов.
+                    Если True, коэффициенты переворачиваются перед умножением и обратно после.
+                    Если False, предполагается, что коэффициенты уже в порядке от младшей к старшей степени.
+    :return: Коэффициенты результирующего многочлена.
+             Если reverse=True, то от старшей степени к младшей.
+             Если reverse=False, то от младшей степени к старшей.
     """
-    # Переворачиваем коэффициенты для удобства (младшая к старшей)
-    coeffs1_rev = coeffs1[::-1]
-    coeffs2_rev = coeffs2[::-1]
+    if reverse:
+        coeffs1_rev = coeffs1[::-1]
+        coeffs2_rev = coeffs2[::-1]
+    else:
+        coeffs1_rev = coeffs1
+        coeffs2_rev = coeffs2
 
     # Вычисляем степень результирующего многочлена
     result_degree = len(coeffs1_rev) + len(coeffs2_rev) - 1
@@ -98,12 +120,15 @@ def multiply_naive(coeffs1: List[int], coeffs2: List[int], p: int) -> List[int]:
         for j in range(len(coeffs2_rev)):
             result_rev[i + j] = (result_rev[i + j] + coeffs1_rev[i] * coeffs2_rev[j]) % p
 
-    # Удаляем ведущие нули (в низшей степени после переворота)
+    # Удаляем ведущие нули
     while len(result_rev) > 1 and result_rev[-1] == 0:
         result_rev.pop()
 
-    # Переворачиваем обратно к старшей степени
-    result = result_rev[::-1]
+    if reverse:
+        # Переворачиваем обратно к старшей степени
+        result = result_rev[::-1]
+    else:
+        result = result_rev
 
     return result
 
@@ -118,6 +143,7 @@ def zip_extended(*args):
     max_len = max(len(arg) for arg in args)
     extended_args = [arg + [0] * (max_len - len(arg)) for arg in args]
     return zip(*extended_args)
+
 
 def format_polynomial(poly: np.poly1d) -> str:
     """
@@ -263,6 +289,3 @@ def inverse_polynomial(poly: np.poly1d, p: int, modulus_poly: np.poly1d) -> np.p
         return np.poly1d([inverse_el])
 
     return mod_pow_polynomial(poly, p ** (len(modulus_poly.coeffs) - 1) - 2, p, modulus_poly)
-
-
-
