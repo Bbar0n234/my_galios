@@ -14,6 +14,8 @@ from core import (
     create_copy_button,
 )
 
+from datetime import datetime, timedelta
+
 field_extension_name = 'Работа с расширением поля'
 simple_field_name = 'Работа с простым полем'
 finding_poly_name = 'Поиск неприводимых многочленов'
@@ -206,7 +208,7 @@ def main_galois():
                     st.session_state['irreducible_pols'].extend(irreducible_polys)
                     st.session_state['offset'] += st.session_state['batch_size']
 
-                    save_polynomials_to_db(irreducible_polys, st.session_state['p_irreducible'], st.session_state['n_irreducible'])
+                    # save_polynomials_to_db(irreducible_polys, st.session_state['p_irreducible'], st.session_state['n_irreducible'])
 
 
         if (st.session_state.get('p_irreducible') != p_irreducible or
@@ -232,11 +234,21 @@ def main_galois():
                 poly = np.poly1d(poly_coeffs)
                 polynomial_str = format_polynomial(poly)
 
-                cols = st.columns([3, 2])
+                cols = st.columns([4, 2]) #
                 with cols[0]:
                     st.write(polynomial_str)
                 with cols[1]:
                     create_copy_button(", ".join(map(str, poly_coeffs)), f"{idx}_{curr_irr_p}_{degree}")
+
+                    save_button = st.button(f"Сохранить {polynomial_str}")
+                    if save_button:
+                        time = datetime.now()
+                        save_polynomials_to_db([poly], st.session_state['p_irreducible'],
+                                               st.session_state['n_irreducible'], time)
+                        st.success(
+                            f"Многочлен сохранён: {polynomial_str} в {time.strftime('%Y-%m-%d %H:%M:%S')}")
+
+
 
             if st.button("Ещё"):
                 with st.spinner("Поиск неприводимых многочленов..."):
@@ -251,7 +263,7 @@ def main_galois():
                         st.session_state['irreducible_pols'].extend(irreducible_polys)
                         st.session_state['offset'] += st.session_state['batch_size']
 
-                        save_polynomials_to_db(irreducible_polys, st.session_state['p_irreducible'], st.session_state['n_irreducible'])
+                        # save_polynomials_to_db(irreducible_polys, st.session_state['p_irreducible'], st.session_state['n_irreducible'])
                     else:
                         st.write("Больше неприводимых многочленов не найдено.")
 
@@ -270,7 +282,7 @@ def main_galois():
                 if saved_polys:
                     st.write(f"Найдено {len(saved_polys)} многочленов с p={int(p_load)} и n={int(n_load)}:")
                     for idx, record in enumerate(saved_polys):
-                        p_val, n_val, coeffs_str = record
+                        p_val, n_val, coeffs_str, date = record
                         coeffs = list(map(int, coeffs_str.split(',')))
                         poly_np = np.poly1d(coeffs)
 
@@ -279,11 +291,13 @@ def main_galois():
 
                         polynomial_str = format_polynomial(poly_np)
 
-                        cols = st.columns([3, 2])
+                        cols = st.columns([4, 2])
                         with cols[0]:
                             st.write(polynomial_str)
+                            st.write(date)
                         with cols[1]:
                             create_copy_button(coeffs_str, f"{idx}_{p_load}_{n_load}")
+
                 else:
                     st.write("Нет сохраненных многочленов для заданных p и n.")
 

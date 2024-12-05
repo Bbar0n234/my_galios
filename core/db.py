@@ -21,7 +21,7 @@ def initialize_database(db_path='irreducible_polynomials.db'):
     conn.close()
 
 
-def save_polynomials_to_db(polynomials, p, n, db_path='irreducible_polynomials.db'):
+def save_polynomials_to_db(polynomials, p, n, time, db_path='irreducible_polynomials.db'):
     """
     Сохраняет список многочленов в базу данных.
     """
@@ -32,9 +32,9 @@ def save_polynomials_to_db(polynomials, p, n, db_path='irreducible_polynomials.d
     cursor = conn.cursor()
     try:
         cursor.executemany('''
-            INSERT OR IGNORE INTO irreducible_polynomials (p, n, coefficients)
-            VALUES (?, ?, ?)
-        ''', [(p, n, ", ".join(map(str, poly))) for poly in polynomials])
+            INSERT OR IGNORE INTO irreducible_polynomials (p, n, coefficients, timestamp)
+            VALUES (?, ?, ?, ?)
+        ''', [(p, n, ", ".join(map(str, poly)), time.strftime('%Y-%m-%d %H:%M:%S')) for poly in polynomials])
         conn.commit()
     except Exception as e:
         print(f"Ошибка при сохранении многочленов в базу данных: {e}")
@@ -49,7 +49,7 @@ def get_saved_polynomials(p=None, n=None, db_path='irreducible_polynomials.db'):
 
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
-    query = "SELECT p, n, coefficients FROM irreducible_polynomials WHERE 1=1"
+    query = "SELECT p, n, coefficients, timestamp  FROM irreducible_polynomials WHERE 1=1"
     params = []
     if p is not None:
         query += " AND p = ?"
