@@ -77,7 +77,7 @@ def main_galois():
     if operating_mode in [field_extension_name, simple_field_name]:
         st.header("Определение поля")
 
-        p = st.number_input("Введите характеристику p (простое число):", min_value=2, max_value=100, value=2, step=1)
+        p = st.number_input("Введите характеристику p (простое число):", min_value=2, max_value=1000, value=2, step=1)
 
         if not isprime(p):
             st.error(f"{p} не является простым числом! Пожалуйста, введите простое число.")
@@ -182,7 +182,7 @@ def main_galois():
         st.header("Поиск неприводимых многочленов")
 
         p_irreducible = st.number_input("Введите характеристику p (простое число):", min_value=2, max_value=100,  value=2, step=1, key='p_irreducible_input')
-        n_irreducible = st.number_input("Введите степень многочлена n:", min_value=1, max_value=50, value=3, step=1, key='n_irreducible_input')
+        n_irreducible = st.number_input("Введите степень многочлена n:", min_value=1, max_value=1000, value=3, step=1, key='n_irreducible_input')
 
         if not isprime(p_irreducible):
             st.error(f"{p_irreducible} не является простым числом! Пожалуйста, введите простое число.")
@@ -271,7 +271,7 @@ def main_galois():
         st.header("Загрузить многочлены из Базы Данных")
 
         p_load = st.number_input("Введите характеристику p:", min_value=2, max_value=100, step=1, key='p_load_input')
-        n_load = st.number_input("Введите степень многочлена n:", min_value=1, max_value=50,  step=1, key='n_load_input')
+        n_load = st.number_input("Введите степень многочлена n:", min_value=1, max_value=1000,  step=1, key='n_load_input')
 
         if st.button("Загрузить многочлены"):
             if p_load is None or n_load is None:
@@ -346,7 +346,7 @@ def main_galois():
                     entry = f"Ошибка при добавлении элемента поля GF({p}^n): {str(e)}. Введённые коэффициенты: '{new_poly_input}'"
                     log_operation(st.session_state['operation_log'], entry)
         else:
-            new_element_value = st.number_input("Введите значение нового элемента поля:", max_value=100, step=1, key="new_element")
+            new_element_value = st.number_input("Введите значение нового элемента поля:", max_value=1000, step=1, key="new_element")
 
             if st.button("Добавить элемент"):
                 try:
