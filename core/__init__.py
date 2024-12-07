@@ -1,7 +1,7 @@
 from .GaloisFieldExtension import GaloisFieldExtension
 from .GaloisFieldSimple import GaloisFieldSimple
 from elements import format_polynomial
-from .find_irreducible_poly import find_irreducible_polynomials_batch
+from .find_irreducible_poly import find_irreducible_polynomials
 from .db import save_polynomials_to_db, initialize_database, get_saved_polynomials
 from .button import create_copy_button
 
@@ -14,7 +14,7 @@ __all__ = (
     "GaloisFieldExtension",
     "GaloisFieldSimple",
     "format_polynomial",
-    "find_irreducible_polynomials_batch",
+    "find_irreducible_polynomials",
     "save_polynomials_to_db",
     "initialize_database",
     "get_saved_polynomials",

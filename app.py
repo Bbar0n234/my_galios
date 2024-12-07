@@ -6,7 +6,7 @@ from sympy import isprime
 from core import (
     GaloisFieldExtension,
     GaloisFieldSimple,
-    find_irreducible_polynomials_batch,
+    find_irreducible_polynomials,
     format_polynomial,
     save_polynomials_to_db,
     get_saved_polynomials,
@@ -169,109 +169,124 @@ def main_galois():
                 st.success(f"Поле {field} успешно создано.")
             except Exception as e:
                 st.error("Ошибка при создании простого поля.")
-
                 entry = f"Ошибка при создании простого поля GF({p}): {str(e)}"
                 log_operation(st.session_state['operation_log'], entry)
         else:
             st.info("Пожалуйста, введите корректную характеристику поля p.")
-
             entry = "Информация: Требуется корректная характеристика поля p для продолжения."
             log_operation(st.session_state['operation_log'], entry)
 
     elif operating_mode == finding_poly_name:
         st.header("Поиск неприводимых многочленов")
 
-        p_irreducible = st.number_input("Введите характеристику p (простое число):", min_value=2, max_value=100,  value=2, step=1, key='p_irreducible_input')
-        n_irreducible = st.number_input("Введите степень многочлена n:", min_value=1, max_value=1000, value=3, step=1, key='n_irreducible_input')
+        # Ввод пользователем характеристик p и степени n
+        p_irreducible = st.number_input(
+            "Введите характеристику p (простое число):",
+            min_value=2,
+            max_value=100,
+            value=2,
+            step=1,
+            key='p_irreducible_input'
+        )
 
+        n_irreducible = st.number_input(
+            "Введите степень многочлена n:",
+            min_value=1,
+            max_value=1000,
+            value=3,
+            step=1,
+            key='n_irreducible_input'
+        )
+
+        # Проверка, является ли p простым числом
         if not isprime(p_irreducible):
             st.error(f"{p_irreducible} не является простым числом! Пожалуйста, введите простое число.")
-            p_irreducible = None
+            p_valid = False
+        else:
+            p_valid = True
 
-        if st.button("Поиск неприводимых многочленов"):
-            if p_irreducible is None:
-                st.error("Введите корректное простое число p.")
-            else:
+        # Инициализация состояния при изменении p или n
+        if ('generator' not in st.session_state or
+            'p_irreducible' not in st.session_state or
+            'n_irreducible' not in st.session_state or
+            st.session_state.get('p_irreducible') != p_irreducible or
+            st.session_state.get('n_irreducible') != n_irreducible):
+
+            if p_valid:
                 st.session_state['p_irreducible'] = int(p_irreducible)
                 st.session_state['n_irreducible'] = int(n_irreducible)
-                st.session_state['offset'] = 0
                 st.session_state['irreducible_pols'] = []
-                st.session_state['batch_size'] = 100
-
-                with st.spinner("Поиск неприводимых многочленов..."):
-                    irreducible_polys = find_irreducible_polynomials_batch(
-                        st.session_state['p_irreducible'],
-                        st.session_state['n_irreducible'],
-                        st.session_state['batch_size'],
-                        st.session_state['offset']
-                    )
-                    st.session_state['irreducible_pols'].extend(irreducible_polys)
-                    st.session_state['offset'] += st.session_state['batch_size']
-
-                    # save_polynomials_to_db(irreducible_polys, st.session_state['p_irreducible'], st.session_state['n_irreducible'])
-
-
-        if (st.session_state.get('p_irreducible') != p_irreducible or
-            st.session_state.get('n_irreducible') != n_irreducible):
-            if p_irreducible is not None:
-                st.session_state['p_irreducible'] = int(p_irreducible)
+                st.session_state['generator'] = find_irreducible_polynomials(int(p_irreducible), int(n_irreducible))
             else:
                 st.session_state['p_irreducible'] = None
+                st.session_state['n_irreducible'] = None
+                st.session_state['irreducible_pols'] = []
+                st.session_state['generator'] = None
 
-            st.session_state['n_irreducible'] = int(n_irreducible)
-            st.session_state['offset'] = 0
-            st.session_state['irreducible_pols'] = []
+        # Кнопка для поиска следующего неприводимого многочлена
+        if not st.session_state['irreducible_pols']:
+            if st.button("Поиск неприводимых многочленов"):
+                if not p_valid:
+                    st.error("Введите корректное простое число p.")
+                elif st.session_state['generator'] is None:
+                    st.error("Введите корректные значения p и n.")
+                else:
+                    with st.spinner("Поиск неприводимых многочленов..."):
+                        try:
+                            poly = next(st.session_state['generator'])
+                            st.session_state['irreducible_pols'].append(poly)
+                            st.rerun()
+                            # st.success("Найден неприводимый многочлен.")
+                        except StopIteration:
+                            st.warning("Больше неприводимых многочленов не найдено.")
+                            st.session_state['generator'] = None  # Завершить генератор
+        else:
+            if st.session_state['irreducible_pols']:
+                st.write(f"Найдено {len(st.session_state['irreducible_pols'])} неприводимых многочленов:")
+                for idx, poly_coeffs in enumerate(st.session_state['irreducible_pols']):
+                    curr_irr_p = st.session_state['p_irreducible']
 
+                    poly_coeffs = [coef % curr_irr_p for coef in poly_coeffs]
+                    degree = len(poly_coeffs) - 1
 
-        if st.session_state['irreducible_pols']:
-            st.write(f"Найдено {len(st.session_state['irreducible_pols'])} неприводимых многочленов:")
-            for idx, poly_coeffs in enumerate(st.session_state['irreducible_pols']):
-                curr_irr_p = st.session_state['p_irreducible']
+                    poly = np.poly1d(poly_coeffs)
+                    polynomial_str = format_polynomial(poly)
 
-                poly_coeffs = [coef % curr_irr_p for coef in poly_coeffs]
-                degree = len(poly_coeffs) - 1
+                    cols = st.columns([4, 2]) #
+                    with cols[0]:
+                        st.write(polynomial_str)
+                    with cols[1]:
+                        create_copy_button(", ".join(map(str, poly_coeffs)), f"{idx}_{curr_irr_p}_{degree}")
 
-                poly = np.poly1d(poly_coeffs)
-                polynomial_str = format_polynomial(poly)
+                        save_button = st.button(f"Сохранить {polynomial_str}")
+                        if save_button:
+                            time = datetime.now()
+                            save_polynomials_to_db([poly], st.session_state['p_irreducible'],
+                                                   st.session_state['n_irreducible'], time)
+                            st.success(
+                                f"Многочлен сохранён: {polynomial_str} в {time.strftime('%Y-%m-%d %H:%M:%S')}")
 
-                cols = st.columns([4, 2]) #
-                with cols[0]:
-                    st.write(polynomial_str)
-                with cols[1]:
-                    create_copy_button(", ".join(map(str, poly_coeffs)), f"{idx}_{curr_irr_p}_{degree}")
-
-                    save_button = st.button(f"Сохранить {polynomial_str}")
-                    if save_button:
-                        time = datetime.now()
-                        save_polynomials_to_db([poly], st.session_state['p_irreducible'],
-                                               st.session_state['n_irreducible'], time)
-                        st.success(
-                            f"Многочлен сохранён: {polynomial_str} в {time.strftime('%Y-%m-%d %H:%M:%S')}")
-
-
-
+            # Кнопка для поиска следующего многочлена
             if st.button("Ещё"):
-                with st.spinner("Поиск неприводимых многочленов..."):
-                    irreducible_polys = find_irreducible_polynomials_batch(
-                        st.session_state['p_irreducible'],
-                        st.session_state['n_irreducible'],
-                        st.session_state['batch_size'],
-                        st.session_state['offset']
-                    )
-
-                    if irreducible_polys:
-                        st.session_state['irreducible_pols'].extend(irreducible_polys)
-                        st.session_state['offset'] += st.session_state['batch_size']
-
-                        # save_polynomials_to_db(irreducible_polys, st.session_state['p_irreducible'], st.session_state['n_irreducible'])
-                    else:
-                        st.write("Больше неприводимых многочленов не найдено.")
+                if not p_valid:
+                    st.error("Введите корректное простое число p.")
+                elif st.session_state.get('generator') is None:
+                    st.warning("Больше неприводимых многочленов не найдено или генератор не инициализирован.")
+                else:
+                    with st.spinner("Поиск следующего неприводимого многочлена..."):
+                        try:
+                            poly = next(st.session_state['generator'])
+                            st.session_state['irreducible_pols'].append(poly)
+                            st.rerun()
+                        except StopIteration:
+                            st.warning("Больше неприводимых многочленов не найдено.")
+                            st.session_state['generator'] = None  # Завершить генератор
 
     elif operating_mode == load_db_name:
         st.header("Загрузить многочлены из Базы Данных")
 
         p_load = st.number_input("Введите характеристику p:", min_value=2, max_value=100, step=1, key='p_load_input')
-        n_load = st.number_input("Введите степень многочлена n:", min_value=1, max_value=1000,  step=1, key='n_load_input')
+        n_load = st.number_input("Введите степень многочлена n:", min_value=1, max_value=100,  step=1, key='n_load_input')
 
         if st.button("Загрузить многочлены"):
             if p_load is None or n_load is None:
@@ -300,7 +315,6 @@ def main_galois():
 
                 else:
                     st.write("Нет сохраненных многочленов для заданных p и n.")
-
 
     if field:
         st.header("Элементы поля")
