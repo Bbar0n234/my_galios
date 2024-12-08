@@ -7,7 +7,7 @@ import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
 
-from elements import GaloisFieldExtensionElement
+from elements import GaloisFieldExtensionElement, is_irreducible_benor
 
 from sympy import isprime, Poly
 from sympy.abc import x
@@ -29,24 +29,12 @@ class GaloisFieldExtension:
         if not isprime(p):
             raise ValueError(f"Число {p} не является простым!")
 
-        if not self._is_irreducible(modulus_coeffs, p):
+        if not is_irreducible_benor((p, modulus_coeffs)):
             raise ValueError(f"Многочлен {modulus_coeffs} не является неприводимым над полем GF({p})")
                 
         self.p = p
         self.modulus_polynomial = np.poly1d([coef % p for coef in modulus_coeffs])
 
-    @staticmethod
-    def _is_irreducible(coeffs: List[int], p: int) -> bool:
-        """
-        Проверяет, что многочлен неприводим над полем GF(p).
-
-        :param coeffs: Коэффициенты многочлена.
-        :param p: Характеристика поля.
-        :return: True - если многочлен неприводим, иначе False.
-        """
-        poly = Poly(coeffs[::-1], x, modulus=p)
-
-        return poly.is_irreducible
 
     def create_element(self, coeffs: List[int]) -> GaloisFieldExtensionElement:
         """
