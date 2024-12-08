@@ -7,7 +7,6 @@ from .functions import (
     mod_polynomial,
     inverse_polynomial,
     karatsuba_multiply,
-    multiply_naive,
     format_polynomial,
 )
 

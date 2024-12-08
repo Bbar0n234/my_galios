@@ -1,6 +1,6 @@
 import os
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from elements import is_irreducible_benor
+from concurrent.futures import ProcessPoolExecutor, as_completed
 
 
 def find_irreducible_polynomials_batch(p, n, batch_size, offset=0):
@@ -23,7 +23,7 @@ def find_irreducible_polynomials_batch(p, n, batch_size, offset=0):
         coeffs_full = [leading_coeff] + coeffs
         args.append((p, coeffs_full[::-1]))
 
-    with ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
+    with ProcessPoolExecutor(max_workers=os.cpu_count()) as executor:
         future_to_args = {executor.submit(is_irreducible_benor, arg): arg for arg in args}
         for future in as_completed(future_to_args):
             res = future.result()
